@@ -1,0 +1,6 @@
+*.xml
+fp-info-cache
+_autosave*
+*-backups/
+~*
+*.bak
