@@ -665,6 +665,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C16772"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b2ab5690-aab0-4999-915c-932c40308c23")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/df91cb4b-991e-460d-aae9-95d07ed5e157")
 		(sheetname "Root")
@@ -907,6 +920,19 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "7d4b1a17-7814-4f89-b9a4-bb9f7d462887")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C26956"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "c7ceb650-0f3b-4d92-bf50-46fa3448c969")
 			(effects
 				(font
 					(size 1 1)
@@ -1180,6 +1206,19 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "a5e884f2-1b64-443f-b4a3-fec07751ff2b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C965791"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "f919a0f7-5f94-487f-930e-797a44a5c6e7")
 			(effects
 				(font
 					(size 1 1)
@@ -1813,6 +1852,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C15850"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "a72efb45-f9b5-4f6d-b068-1011a4f41d7e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/295577af-e19c-4453-b8ba-29180289c7c1")
 		(sheetname "Root")
@@ -2055,6 +2107,19 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "00648433-74d0-48b1-8790-e30b5af5678b")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C25905"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "781b1824-de10-4603-94f5-80e4af54c7a9")
 			(effects
 				(font
 					(size 1 1)
@@ -2748,7 +2813,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C2934569"
 			(at 0 0 180)
 			(layer "F.Fab")
 			(hide yes)
@@ -2821,6 +2886,8 @@
 			)
 		)
 		(path "/07ce6be7-2a0e-49b8-a203-07e896737c3d")
+		(sheetname "Root")
+		(sheetfile "esp-daikin-r1p0.kicad_sch")
 		(zone_connect 2)
 		(attr smd)
 		(fp_line
@@ -3130,7 +3197,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 20 "unconnected-(U1-GPIO0{slash}ADC1_CH0{slash}XTAL_32K_P-Pad12)")
 			(pinfunction "GPIO0/ADC1_CH0/XTAL_32K_P")
-			(pintype "bidirectional")
+			(pintype "bidirectional+no_connect")
 			(uuid "31a5b103-172e-464e-b9d1-7c4a25235b07")
 		)
 		(pad "13" smd rect
@@ -3139,7 +3206,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 21 "unconnected-(U1-GPIO1{slash}ADC1_CH1{slash}XTAL_32K_N-Pad13)")
 			(pinfunction "GPIO1/ADC1_CH1/XTAL_32K_N")
-			(pintype "bidirectional")
+			(pintype "bidirectional+no_connect")
 			(uuid "c856c975-4c8b-41cb-a6dd-f1a4e3c1dad8")
 		)
 		(pad "14" smd rect
@@ -3193,7 +3260,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 24 "unconnected-(U1-GPIO5{slash}ADC2_CH0-Pad19)")
 			(pinfunction "GPIO5/ADC2_CH0")
-			(pintype "bidirectional")
+			(pintype "bidirectional+no_connect")
 			(uuid "fc595961-1cd3-4ead-add6-59daeaf1c8a9")
 		)
 		(pad "20" smd rect
@@ -3202,7 +3269,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 25 "unconnected-(U1-GPIO6-Pad20)")
 			(pinfunction "GPIO6")
-			(pintype "bidirectional")
+			(pintype "bidirectional+no_connect")
 			(uuid "5afcfe89-dc23-41a2-bb22-380fe157bd88")
 		)
 		(pad "21" smd rect
@@ -3211,7 +3278,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 26 "unconnected-(U1-GPIO7-Pad21)")
 			(pinfunction "GPIO7")
-			(pintype "bidirectional")
+			(pintype "bidirectional+no_connect")
 			(uuid "43f0ac50-0294-40de-874c-6b1dedc167eb")
 		)
 		(pad "22" smd rect
@@ -3256,7 +3323,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 30 "unconnected-(U1-GPIO18{slash}USB_D--Pad26)")
 			(pinfunction "GPIO18/USB_D-")
-			(pintype "bidirectional")
+			(pintype "bidirectional+no_connect")
 			(uuid "fb22acad-0e74-4ecb-a653-9dbabbe0bc68")
 		)
 		(pad "27" smd rect
@@ -3265,7 +3332,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(net 31 "unconnected-(U1-GPIO19{slash}USB_D+-Pad27)")
 			(pinfunction "GPIO19/USB_D+")
-			(pintype "bidirectional")
+			(pintype "bidirectional+no_connect")
 			(uuid "98a6222e-3990-421d-b23e-29c9fe32e0ed")
 		)
 		(pad "28" smd rect
@@ -3736,6 +3803,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C25879"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "d0cfa019-3751-4abc-8bb6-8eb993dd3fbb")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/a02b6358-d454-4338-94d2-fd8c47e63edf")
 		(sheetname "Root")
@@ -4168,6 +4248,19 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "9da36d75-2e9d-4ef5-8b6e-fe19f02a8653")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C16772"
+			(at 0 0 -90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3c36503a-b00e-4d4a-a0dc-f955ed0a2471")
 			(effects
 				(font
 					(size 1 1)
@@ -4777,6 +4870,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C106862"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "fe3ab3d0-7096-4d3b-be0f-87ff19193a41")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/2c09057f-190f-46e9-9314-fd0dbf45dcbe")
 		(sheetname "Root")
@@ -5026,6 +5132,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C25905"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "3bc45f28-726f-491d-b372-53f808cec9ad")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/7240b062-8331-4557-b3cd-a880b779cd04")
 		(sheetname "Root")
@@ -5239,7 +5358,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C8523"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -5756,6 +5875,19 @@
 					(size 1.27 1.27)
 				)
 				(justify mirror)
+			)
+		)
+		(property "LCSC" "C41240"
+			(at 0 0 0)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b93ac555-6f7d-446d-8f06-02700b9c993e")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
 			)
 		)
 		(property ki_fp_filters "SOT?23*")
@@ -6373,6 +6505,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C25117"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "21d78fb7-21e7-4406-b26b-43c90a06761c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/f1fac25e-8fb0-4b1f-8128-9cf8d9be86f1")
 		(sheetname "Root")
@@ -6615,6 +6760,19 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "25bf919b-0741-413e-bd8a-0fde85b439b7")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C25897"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "b6845324-2468-485d-8789-7d0a714a050f")
 			(effects
 				(font
 					(size 1 1)
@@ -7059,6 +7217,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C59461"
+			(at 0 0 90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "9c18e76c-b499-413e-87d9-053a0ea73410")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "C_*")
 		(path "/e519fed2-501c-4cb6-86e4-ae52ce870010")
 		(sheetname "Root")
@@ -7272,7 +7443,7 @@
 				(justify mirror)
 			)
 		)
-		(property "LCSC" ""
+		(property "LCSC" "C63166"
 			(at 0 0 0)
 			(layer "F.Fab")
 			(hide yes)
@@ -7795,6 +7966,19 @@
 				)
 			)
 		)
+		(property "LCSC" "C25879"
+			(at 0 0 180)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "cef28efa-cad1-4110-9206-45c6ebcd95d9")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
 		(property ki_fp_filters "R_*")
 		(path "/af24fd16-e276-4112-9396-27a1943e5841")
 		(sheetname "Root")
@@ -8049,6 +8233,19 @@
 			(layer "F.Fab")
 			(hide yes)
 			(uuid "2badcb55-6a0c-4048-aad8-7e0c01cdb60c")
+			(effects
+				(font
+					(size 1 1)
+					(thickness 0.15)
+				)
+			)
+		)
+		(property "LCSC" "C19702"
+			(at 0 0 -90)
+			(unlocked yes)
+			(layer "F.Fab")
+			(hide yes)
+			(uuid "62a9e9a2-34b8-4ffb-93be-86902f9a9a4a")
 			(effects
 				(font
 					(size 1 1)
