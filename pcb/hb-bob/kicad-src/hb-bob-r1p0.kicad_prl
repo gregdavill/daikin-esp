@@ -1,7 +1,7 @@
 {
   "board": {
-    "active_layer": 44,
-    "active_layer_preset": "",
+    "active_layer": 0,
+    "active_layer_preset": "All Layers",
     "auto_track_width": true,
     "hidden_netclasses": [],
     "hidden_nets": [],
@@ -43,6 +43,8 @@
       13,
       15,
       16,
+      17,
+      18,
       19,
       20,
       21,
@@ -73,7 +75,7 @@
     "ssh_key": ""
   },
   "meta": {
-    "filename": "hb-bob-r0.1.kicad_prl",
+    "filename": "hb-bob-r1p0.kicad_prl",
     "version": 3
   },
   "project": {

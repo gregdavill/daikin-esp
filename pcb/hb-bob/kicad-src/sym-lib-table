@@ -1,4 +1,4 @@
 (sym_lib_table
-  (lib (name "sapphire-captain")(type "KiCad")(uri "${KIPRJMOD}/../../lib/sapphire-captain.kicad_sym")(options "")(descr ""))
   (lib (name "Espressif")(type "KiCad")(uri "${KIPRJMOD}/../../lib/espressif-kicad-libraries/symbols/Espressif.kicad_sym")(options "")(descr ""))
+  (lib (name "daikin-esp")(type "KiCad")(uri "${KIPRJMOD}/../../lib/daikin-esp.kicad_sym")(options "")(descr ""))
 )
