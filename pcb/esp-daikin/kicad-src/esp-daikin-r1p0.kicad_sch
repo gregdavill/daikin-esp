@@ -6,8 +6,8 @@
 	(paper "A4")
 	(title_block
 		(title "esp-daikin")
-		(date "2024-03-07")
-		(rev "r1p0")
+		(date "2024-04-29")
+		(rev "r1p1")
 		(company "Greg Davill <greg.davill@gmail.com>")
 		(comment 1 "ESP32C3 controller board")
 	)
@@ -2982,6 +2982,34 @@
 		(diameter 0)
 		(color 0 0 0 0)
 		(uuid "f6afa4be-638b-446a-86c9-64c5997d475e")
+	)
+	(no_connect
+		(at 91.44 74.93)
+		(uuid "2f3531a7-13ea-4ea8-af54-49d6e5b3c9e8")
+	)
+	(no_connect
+		(at 91.44 85.09)
+		(uuid "3265c96c-5a75-48c6-b69a-a6293a3063c2")
+	)
+	(no_connect
+		(at 91.44 64.77)
+		(uuid "55851ad8-194e-4c8a-816f-f4de1cecd819")
+	)
+	(no_connect
+		(at 91.44 62.23)
+		(uuid "8c57267d-095c-4206-9bf0-4f3ca40bc08b")
+	)
+	(no_connect
+		(at 91.44 87.63)
+		(uuid "ec1ea941-404a-4ed1-b737-08baa66e6c72")
+	)
+	(no_connect
+		(at 91.44 72.39)
+		(uuid "f62484c9-3760-45ad-97e7-003ed31cb04b")
+	)
+	(no_connect
+		(at 91.44 77.47)
+		(uuid "fe3fc118-5189-4762-b2e3-e5e57c2896b7")
 	)
 	(wire
 		(pts
