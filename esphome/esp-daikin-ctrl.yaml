@@ -20,6 +20,7 @@ logger:
 api:
 
 ota:
+  platform: esphome
 
 wifi:
   ssid: !secret wifi_ssid
@@ -34,4 +35,30 @@ status_led:
 
 climate:
   - platform: daikin_ducted
+    id: daikin0
     name: "Ducted AC"
+
+fan:
+  - platform: template
+    name: "Ducted Fan"
+    speed_count: 3
+    on_state:
+      then:
+        lambda: |-
+          auto call = id(daikin0).make_call();
+          switch(x->state) {
+            case true: call.set_mode("FAN_ONLY"); break;
+            case false: call.set_mode("OFF"); break;
+          }
+          call.perform();
+    on_speed_set:
+      then:
+        lambda: |-
+          auto call = id(daikin0).make_call();
+          switch(x) {
+            case 1: call.set_fan_mode("LOW"); break;
+            case 2: call.set_fan_mode("MEDIUM"); break;
+            case 3: call.set_fan_mode("HIGH"); break;
+            default: break;
+          }
+          call.perform();
