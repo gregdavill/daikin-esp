@@ -3373,7 +3373,7 @@
 	)
 	(polyline
 		(pts
-			(xy 179.07 152.4) (xy 283.21 152.4)
+			(xy 177.8 22.86) (xy 281.94 22.86)
 		)
 		(stroke
 			(width 0.3)
@@ -3962,8 +3962,8 @@
 		(uuid "f477a769-3cf9-4c8a-b9b2-e7199e312b1c")
 	)
 	(image
-		(at 224.79 49.53)
-		(scale 2.09558)
+		(at 248.92 60.96)
+		(scale 1.61617)
 		(uuid "9256d211-c271-441a-b888-4c63d1e97169")
 		(data "iVBORw0KGgoAAAANSUhEUgAAAcAAAAEmCAYAAAD1OEDsAAAABHNCSVQICAgIfAhkiAAAABl0RVh0"
 			"U29mdHdhcmUAZ25vbWUtc2NyZWVuc2hvdO8Dvz4AAAAmdEVYdENyZWF0aW9uIFRpbWUATW9uIDI5"
@@ -4696,7 +4696,7 @@
 	)
 	(text_box "Add GPIO9 test-point"
 		(exclude_from_sim no)
-		(at 200.66 156.21 0)
+		(at 199.39 26.67 0)
 		(size 82.55 7.62)
 		(stroke
 			(width 0)
@@ -4715,7 +4715,7 @@
 	)
 	(text_box "Date"
 		(exclude_from_sim no)
-		(at 185.42 148.59 0)
+		(at 184.15 19.05 0)
 		(size 15.24 3.81)
 		(stroke
 			(width 0)
@@ -4734,7 +4734,7 @@
 	)
 	(text_box "r1p0"
 		(exclude_from_sim no)
-		(at 179.07 152.4 0)
+		(at 177.8 22.86 0)
 		(size 6.35 3.81)
 		(stroke
 			(width 0)
@@ -4751,9 +4751,30 @@
 		)
 		(uuid "6c68d106-29a3-403a-b9b5-1616c2f67d30")
 	)
+	(text_box "Changelog"
+		(exclude_from_sim no)
+		(at 177.8 13.97 0)
+		(size 104.14 5.08)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(fill
+			(type none)
+		)
+		(effects
+			(font
+				(size 1.8 1.8)
+				(thickness 0.36)
+				(bold yes)
+			)
+			(justify left top)
+		)
+		(uuid "6ebb305f-e50e-4b57-b0ee-6303f6c9cc87")
+	)
 	(text_box "Rev"
 		(exclude_from_sim no)
-		(at 179.07 148.59 0)
+		(at 177.8 19.05 0)
 		(size 6.35 3.81)
 		(stroke
 			(width 0)
@@ -4772,7 +4793,7 @@
 	)
 	(text_box "Comment"
 		(exclude_from_sim no)
-		(at 200.66 148.59 0)
+		(at 199.39 19.05 0)
 		(size 82.55 3.81)
 		(stroke
 			(width 0)
@@ -4791,7 +4812,7 @@
 	)
 	(text_box "2024-03-07"
 		(exclude_from_sim no)
-		(at 185.42 152.4 0)
+		(at 184.15 22.86 0)
 		(size 15.24 3.81)
 		(stroke
 			(width 0)
@@ -4810,7 +4831,7 @@
 	)
 	(text_box "2024-04-29"
 		(exclude_from_sim no)
-		(at 185.42 156.21 0)
+		(at 184.15 26.67 0)
 		(size 15.24 7.62)
 		(stroke
 			(width 0)
@@ -4829,7 +4850,7 @@
 	)
 	(text_box "Initial Release"
 		(exclude_from_sim no)
-		(at 200.66 152.4 0)
+		(at 199.39 22.86 0)
 		(size 82.55 3.81)
 		(stroke
 			(width 0)
@@ -4848,7 +4869,7 @@
 	)
 	(text_box "r1p1"
 		(exclude_from_sim no)
-		(at 179.07 156.21 0)
+		(at 177.8 26.67 0)
 		(size 6.35 7.62)
 		(stroke
 			(width 0)
@@ -5012,7 +5033,7 @@
 			(uuid "9d02e87e-7d99-43ce-b194-05b9c721b542")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR0102")
 					(unit 1)
@@ -5249,7 +5270,7 @@
 			(uuid "d71fc448-1402-4cba-91a0-170d1810969d")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "U1")
 					(unit 1)
@@ -5321,7 +5342,7 @@
 			(uuid "54b30160-0f7f-49b1-9abd-90ba0fd5c562")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP4")
 					(unit 1)
@@ -5399,7 +5420,7 @@
 			(uuid "e3778721-7820-4172-b8de-0342c9ed4c5a")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "C1")
 					(unit 1)
@@ -5484,7 +5505,7 @@
 			(uuid "c729920d-4669-43e3-8b6f-9324514661fa")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "C3")
 					(unit 1)
@@ -5568,7 +5589,7 @@
 			(uuid "b985ab49-c6b8-4b82-b65c-681e55367bb8")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "C6")
 					(unit 1)
@@ -5640,7 +5661,7 @@
 			)
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "H2")
 					(unit 1)
@@ -5706,7 +5727,7 @@
 			(uuid "986fed25-e8fb-47fe-982e-c004ab2826f2")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP8")
 					(unit 1)
@@ -5778,7 +5799,7 @@
 			)
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "H3")
 					(unit 1)
@@ -5845,7 +5866,7 @@
 			(uuid "fb776613-ac75-4d35-bcf9-0042d51f0c16")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR010")
 					(unit 1)
@@ -5918,7 +5939,7 @@
 			(uuid "b2c29154-5494-440d-8345-d120648f1c7c")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "J2")
 					(unit 1)
@@ -5985,7 +6006,7 @@
 			(uuid "240acd0e-f353-4c14-be91-ef47ab4c995d")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR03")
 					(unit 1)
@@ -6070,7 +6091,7 @@
 			(uuid "9a38b103-707d-496d-b5f0-27d3304e288a")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "R3")
 					(unit 1)
@@ -6143,7 +6164,7 @@
 			(uuid "5e95efda-7994-41a2-8437-89ff34272b19")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR06")
 					(unit 1)
@@ -6215,7 +6236,7 @@
 			(uuid "0710621d-e348-4843-9a5c-002bdebb03b5")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR04")
 					(unit 1)
@@ -6281,7 +6302,7 @@
 			(uuid "93dbc8b4-aa89-4291-a664-90f19aa7197d")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR08")
 					(unit 1)
@@ -6364,7 +6385,7 @@
 			(uuid "fbb35b05-da06-4c05-8271-4a90b4f313d8")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "D2")
 					(unit 1)
@@ -6438,7 +6459,7 @@
 			(uuid "1df01d1e-1f71-4a53-98a4-84b1054d51e3")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR07")
 					(unit 1)
@@ -6523,7 +6544,7 @@
 			(uuid "c770cebe-a470-49bd-840e-436ddbd9d138")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "R12")
 					(unit 1)
@@ -6596,7 +6617,7 @@
 			(uuid "71370b18-6717-4ad2-a5e8-e3754e9a50f4")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR01")
 					(unit 1)
@@ -6681,7 +6702,7 @@
 			(uuid "5d3a2313-bbd9-4962-9eb4-bdbaa2397928")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "D3")
 					(unit 1)
@@ -6747,7 +6768,7 @@
 			(uuid "df7249c0-ff53-4479-8f30-8c3d48689dcf")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP1")
 					(unit 1)
@@ -6830,7 +6851,7 @@
 			(uuid "db6a8c3d-a34e-4b97-9d90-4f4a8d340402")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "L1")
 					(unit 1)
@@ -6902,7 +6923,7 @@
 			(uuid "ec6c37f1-7a50-4f1b-a717-7c7a76ce7b96")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR02")
 					(unit 1)
@@ -6985,7 +7006,7 @@
 			(uuid "d4b7fece-0c12-47a5-b0f0-6eb9c67f1e70")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "J1")
 					(unit 1)
@@ -7063,7 +7084,7 @@
 			(uuid "a2d7082a-3b66-421c-af32-5858adcde896")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "C5")
 					(unit 1)
@@ -7148,7 +7169,7 @@
 			(uuid "91933660-5419-4bdb-a116-83fdb557948a")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "R13")
 					(unit 1)
@@ -7221,7 +7242,7 @@
 			(uuid "e829ea2b-0757-4d20-b3de-c3b917543b3c")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR0101")
 					(unit 1)
@@ -7293,7 +7314,7 @@
 			)
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "H1")
 					(unit 1)
@@ -7360,7 +7381,7 @@
 			(uuid "e6274745-5616-4ed6-a167-35b0c5cb3c8a")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR0124")
 					(unit 1)
@@ -7446,7 +7467,7 @@
 			(uuid "feb03bbb-e9da-4eec-8726-91cb176f5b97")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "R4")
 					(unit 1)
@@ -7518,7 +7539,7 @@
 			(uuid "14d258c3-9579-4f67-b9bd-24aec19024a5")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP2")
 					(unit 1)
@@ -7613,7 +7634,7 @@
 			(uuid "b2fd4e1c-d07d-42c3-b032-69ddc2722417")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "U3")
 					(unit 1)
@@ -7679,7 +7700,7 @@
 			(uuid "1caf535c-b480-439e-9ebe-cd5fbcee112d")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP3")
 					(unit 1)
@@ -7752,7 +7773,7 @@
 			(uuid "e0e1fc0e-54db-4c9a-bd39-8f53a680aa6e")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR0122")
 					(unit 1)
@@ -7838,7 +7859,7 @@
 			(uuid "2d79a443-d401-4f57-b4ae-64f2b26aa335")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "R7")
 					(unit 1)
@@ -7911,7 +7932,7 @@
 			(uuid "14994c88-f295-405d-ad98-9505f360d0a4")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR0123")
 					(unit 1)
@@ -7983,7 +8004,7 @@
 			(uuid "af23b895-bbf9-4acd-893a-09a1f63a3e82")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP11")
 					(unit 1)
@@ -8055,7 +8076,7 @@
 			(uuid "43463f14-a687-4a65-ad39-dd46af6a0a0b")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR0103")
 					(unit 1)
@@ -8127,7 +8148,7 @@
 			(uuid "140aad3a-7d5b-45d7-bf80-acbef4c0aac6")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP9")
 					(unit 1)
@@ -8211,7 +8232,7 @@
 			(uuid "970a2105-ae74-4172-b2fc-86c0ba3e33e5")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "C2")
 					(unit 1)
@@ -8297,7 +8318,7 @@
 			(uuid "cf0dc224-8b92-4855-9569-d73d343946ed")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "R1")
 					(unit 1)
@@ -8381,7 +8402,7 @@
 			(uuid "c1e77511-bb28-4bfa-bbbb-fbf9bf875f9f")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "C7")
 					(unit 1)
@@ -8453,7 +8474,7 @@
 			(uuid "fb14542a-94fb-472b-8a9c-6e21d486c449")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "TP12")
 					(unit 1)
@@ -8525,7 +8546,7 @@
 			(uuid "4257d539-ffa7-4903-8bd6-09e15002ef94")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR05")
 					(unit 1)
@@ -8598,7 +8619,7 @@
 			(uuid "6eddb10c-c49d-483d-b8bd-162d205052a5")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR09")
 					(unit 1)
@@ -8681,7 +8702,7 @@
 			(uuid "a6da638a-ca05-4820-b0b8-39730801fb25")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "R14")
 					(unit 1)
@@ -8753,7 +8774,7 @@
 			)
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "H4")
 					(unit 1)
@@ -8819,7 +8840,7 @@
 			(uuid "861b13ca-7505-483d-99f0-bc6e0ae7c746")
 		)
 		(instances
-			(project "esp-daikin-r1p0"
+			(project "esp-daikin-r1p1"
 				(path "/81d8eb84-5504-4697-9960-5d51224de127"
 					(reference "#PWR011")
 					(unit 1)

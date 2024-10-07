@@ -452,7 +452,7 @@
     "pinned_symbol_libs": []
   },
   "meta": {
-    "filename": "esp-daikin-r1p0.kicad_pro",
+    "filename": "esp-daikin-r1p1.kicad_pro",
     "version": 1
   },
   "net_settings": {
@@ -564,6 +564,30 @@
           "group_by": false,
           "label": "Description",
           "name": "Description",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MFG",
+          "name": "MFG",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "PN-alt0",
+          "name": "PN-alt0",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "MFG-alt0",
+          "name": "MFG-alt0",
+          "show": false
+        },
+        {
+          "group_by": false,
+          "label": "PN",
+          "name": "PN",
           "show": false
         }
       ],
