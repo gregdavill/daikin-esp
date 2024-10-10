@@ -21,7 +21,7 @@ namespace esphome
   namespace daikin_ducted
   {
 
-    static const char *TAG = "homebus.rmt";
+    static const char *TAG = "homebus";
 
 /**
  * @brief RMT resolution for homebus, in Hz
@@ -71,6 +71,21 @@ namespace esphome
       n = n + (n >> 8);
       n = n + (n >> 16);
       return n & 0x0000003F;
+    }
+
+
+    void print_packet(const uint8_t *buffer, const uint32_t buffer_length)
+    {
+      char str[256];
+      char *p = str;
+      p += sprintf(str, "l=%02lu [", buffer_length);
+      for (int i = 0; i < buffer_length; i++)
+      {
+        p += sprintf(p, "%02x ", buffer[i]);
+      }
+      *(p - 1) = ']';
+      *p = 0;
+      ESP_LOGVV(TAG, str);
     }
 
     static int homebus_rmt_decode_data(rmt_item32_t *rmt_symbols, size_t symbol_num, uint8_t *decoded_bytes, size_t max_buffer_length)
@@ -125,8 +140,6 @@ namespace esphome
           if ((symbol_index == symbol_num) || (symbol->duration1 == 0))
           {
             accumulator += HOMEBUS_BIT_DURATION * 11;
-            // symbol_index = symbol_num;
-            // ESP_LOGE(TAG, "Timeout: byte_pos = %lu", byte_pos);
           }
 
           while ((sampling_time < accumulator) && (bit_pos < 11))
@@ -137,18 +150,22 @@ namespace esphome
           }
 
           symbol_index++;
-          // ESP_LOGVV(TAG, "bp: %lu, st: %lu", bit_pos, sampling_time);
         }
 
         /* Check framing and parity */
         if ((decoded_byte & 0x001) == 0x001)
         {
-          ESP_LOGE(TAG, "Bad Start framing, %lu (byte:0x%03x)", accumulator, decoded_byte);
+          ESP_LOGE(TAG, "Bad Start framing, %lu (byte:0x%03x, idx=%u, len=%u)", accumulator, decoded_byte, symbol_index, byte_pos);
+          print_packet(decoded_bytes, byte_pos);
           return 0;
         }
         if ((decoded_byte & 0x400) != 0x400)
         {
-          ESP_LOGE(TAG, "Bad Stop framing, %lu (byte:0x%03x)", accumulator, decoded_byte);
+          ESP_LOGE(TAG, "Bad Stop framing, %lu (byte:0x%03x, idx=%u, len=%u)", accumulator, decoded_byte, symbol_index, byte_pos);
+          print_packet(decoded_bytes, byte_pos);
+
+          for(int i = 0; i < 18; i++)
+            ESP_LOGE(TAG, "  symbol[%u](dur0=%u, dur1=%u)", i, rmt_symbols[i].duration0, rmt_symbols[i].duration1);
           return 0;
         }
         if ((countSetBits(decoded_byte) & 1) == 0)
@@ -169,19 +186,6 @@ namespace esphome
       return byte_pos;
     }
 
-    void print_packet(const uint8_t *buffer, const uint32_t buffer_length)
-    {
-      char str[256];
-      char *p = str;
-      p += sprintf(str, "l=%02lu [", buffer_length);
-      for (int i = 0; i < buffer_length; i++)
-      {
-        p += sprintf(p, "%02x ", buffer[i]);
-      }
-      *(p - 1) = ']';
-      *p = 0;
-      ESP_LOGVV(TAG, str);
-    }
 
     void HomebusRMT::rx_task(void *arg)
     {
@@ -195,17 +199,29 @@ namespace esphome
         size_t length = 0;
         rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceive(rb, &length, portMAX_DELAY);
 
+        // ESP-IDF bug, if rx_end completes on a rx_lim boundary, writing of an rx_end marker 
+        // triggers the rx_thresh interrupt and affixes the end of this packet to the start of the next.
+        // Can't be fixed in IDF as 4.4.8 isn't getting any additional bug fixes.
+        // As configured this boundary is 384 bytes. Re-starting the rmt_rx resets the buffer pointers.
+        if((length % 384) == 0){
+          esp_err_t error = rmt_rx_start(RMT_CHANNEL_2, true);
+          if (error != ESP_OK)
+          {
+            ESP_LOGE(TAG, "Restart of rmt_rx failed");
+          }
+        }
+
         if (items)
         {
-          // ESP_LOG_BUFFER_HEXDUMP(TAG, items, length, ESP_LOG_INFO);
 
-          //gpio_set_level(GPIO_NUM_4, 1);
+          ESP_LOGVV(TAG, "rx: (len=%u, buffer=%p)", length, items);
+          
           size_t decoded_size = homebus_rmt_decode_data(items, length / 4, buffer, 32);
-          //gpio_set_level(GPIO_NUM_4, 0);
-
+          
           // after parsing the data, return spaces to ringbuffer.
           vRingbufferReturnItem(rb, (void *)items);
 
+          // Filter for potential noise/invalid packets. We need atleast the header present
           if (decoded_size < 3)
             continue;
 
@@ -301,10 +317,8 @@ namespace esphome
       tx_items[0] = {{{HOMEBUS_BIT_DURATION * 12, 1, 1, 1}}};
       rmt_write_items(RMT_CHANNEL_0, tx_items, 1, true);
 
-      // const uint8_t buff[] = {0xaa, 0x01, 0x80, 0xFF, 0x00};
-      // write_bytes(buff, 5);
 
-      xTaskCreate(HomebusRMT::rx_task, "homebus_rx_task", 2048 * 8, (void *)this, 28, NULL);
+      xTaskCreatePinnedToCore(HomebusRMT::rx_task, "rmt_rx", 2048 * 8, (void *)this, 1, NULL, 1);
 
       uint16_t thresh;
       rmt_get_rx_idle_thresh(RMT_CHANNEL_2, &thresh);
@@ -365,25 +379,11 @@ namespace esphome
     void HomebusRMT::dump_config()
     {
       ESP_LOGCONFIG(TAG, "Homebus:");
-      //  ESP_LOGE(TAG, "Configuring RMT driver failed: %s", esp_err_to_name(this->error_code_));
     }
 
     void HomebusRMT::loop()
     {
 
-      // size_t len = 0;
-      // auto *item = (rmt_item32_t *)xRingbufferReceive(this->ringbuf_, &len, 0);
-      // if (item != nullptr)
-      // {
-
-      //   this->decode_rmt_(item, len);
-      //   vRingbufferReturnItem(this->ringbuf_, item);
-
-      //   // if (this->temp_.empty())
-      //   return;
-
-      //   // this->call_listeners_dumpers_();
-      // }
     }
 
   } // namespace daikin_ducted
