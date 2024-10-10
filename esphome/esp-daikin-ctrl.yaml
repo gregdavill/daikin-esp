@@ -37,20 +37,36 @@ climate:
   - platform: daikin_ducted
     id: daikin0
     name: "Ducted AC"
+    on_state:
+      then:
+        lambda: |-
+          auto call = id(templatefan0).make_call();
+          call.set_state(x.mode == climate::CLIMATE_MODE_FAN_ONLY);
+          
+          if(x.fan_mode == climate::CLIMATE_FAN_LOW)
+            call.set_speed(1);
+          else if(x.fan_mode == climate::CLIMATE_FAN_MEDIUM)
+            call.set_speed(2);
+          else if(x.fan_mode == climate::CLIMATE_FAN_HIGH)
+            call.set_speed(3);
+
+          if(  id(templatefan0).speed != call.get_speed() 
+            || id(templatefan0).state != call.get_state())
+            call.perform();
 
 fan:
   - platform: template
     name: "Ducted Fan"
+    id: templatefan0
     speed_count: 3
     on_state:
       then:
         lambda: |-
           auto call = id(daikin0).make_call();
-          switch(x->state) {
-            case true: call.set_mode("FAN_ONLY"); break;
-            case false: call.set_mode("OFF"); break;
-          }
-          call.perform();
+          call.set_mode(x->state ? "FAN_ONLY" : "OFF");
+
+          if(id(daikin0).mode != call.get_mode())
+            call.perform();
     on_speed_set:
       then:
         lambda: |-
@@ -61,4 +77,6 @@ fan:
             case 3: call.set_fan_mode("HIGH"); break;
             default: break;
           }
-          call.perform();
+
+          if(id(daikin0).fan_mode != call.get_fan_mode())
+            call.perform();
