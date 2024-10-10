@@ -12,7 +12,7 @@ esp32:
 
 # Enable logging
 logger:
-  level: VERBOSE
+  level: VERY_VERBOSE
   hardware_uart: USB_SERIAL_JTAG
   baud_rate: 2500000
 
