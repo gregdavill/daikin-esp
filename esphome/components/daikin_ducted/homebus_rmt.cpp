@@ -78,7 +78,7 @@ namespace esphome
     {
       char str[256];
       char *p = str;
-      p += sprintf(str, "l=%02lu [", buffer_length);
+      p += sprintf(str, "len=%02lu pkt=[", buffer_length);
       for (int i = 0; i < buffer_length; i++)
       {
         p += sprintf(p, "%02x ", buffer[i]);
@@ -213,8 +213,7 @@ namespace esphome
 
         if (items)
         {
-
-          ESP_LOGVV(TAG, "rx: (len=%u, buffer=%p)", length, items);
+          //ESP_LOGVV(TAG, "rx: (len=%u, buffer=%p)", length, items);
           
           size_t decoded_size = homebus_rmt_decode_data(items, length / 4, buffer, 32);
           
