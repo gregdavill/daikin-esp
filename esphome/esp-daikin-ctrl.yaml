@@ -46,8 +46,10 @@ climate:
       then:
         lambda: |-
           auto call = id(templatefan0).make_call();
-          call.set_state(x.mode == climate::CLIMATE_MODE_FAN_ONLY);
-          
+
+          if(x.mode != climate::CLIMATE_MODE_FAN_ONLY)
+            return;
+
           if(x.fan_mode == climate::CLIMATE_FAN_LOW)
             call.set_speed(1);
           else if(x.fan_mode == climate::CLIMATE_FAN_MEDIUM)
@@ -55,8 +57,7 @@ climate:
           else if(x.fan_mode == climate::CLIMATE_FAN_HIGH)
             call.set_speed(3);
 
-          if(  id(templatefan0).speed != call.get_speed() 
-            || id(templatefan0).state != call.get_state())
+          if(  id(templatefan0).speed != call.get_speed()) 
             call.perform();
 
 fan:
