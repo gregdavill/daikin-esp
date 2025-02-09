@@ -73,11 +73,17 @@ namespace esphome
         ESP_LOGI(TAG, "indoor: %i.%02iC",
                  temp / 256, ((temp & 0xFF) * 100) / 256);
 
-        inst->current_temperature = (float)buffer[8] + ((float)buffer[9] / 256.f);
+        float f_temperature = (float)buffer[8] + ((float)buffer[9] / 256.f);
+        inst->current_temperature = f_temperature;
 
         if(fabs(inst->last_temp_state - inst->current_temperature) > 0.08f){
           inst->publish_state();
           inst->last_temp_state = inst->current_temperature;
+        }
+
+        if (inst->indoor_temperature_sensor_ != nullptr)
+        {
+          inst->indoor_temperature_sensor_->publish_state(f_temperature);
         }
       }
 
@@ -87,7 +93,20 @@ namespace esphome
 
         ESP_LOGI(TAG, "intake: %i.%02iC",
                  temp / 256, ((temp & 0xFF) * 100) / 256);
+
+        float f_temperature = (float)buffer[8] + ((float)buffer[9] / 256.f);
+        if (inst->outdoor_intake_temperature_sensor_ != nullptr)
+        {
+          inst->outdoor_intake_temperature_sensor_->publish_state(f_temperature);
+        }
+
+        float f_temperature0 = (float)buffer[14] + ((float)buffer[15] / 256.f);
+        if (inst->coolant_temperature_sensor_ != nullptr)
+        {
+          inst->coolant_temperature_sensor_->publish_state(f_temperature0);
+        }
       }
+
 
       /* Targeting us */
       if (buffer[0] == 0x00 && buffer[1] == 0xF0)

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "esphome/components/climate/climate.h"
+#include "esphome/components/sensor/sensor.h"
 #include "homebus_rmt.h"
 
 namespace esphome
@@ -24,6 +25,10 @@ namespace esphome
          bool target_temperature_updated = false;
 
          float last_temp_state;
+
+         SUB_SENSOR(indoor_temperature);
+         SUB_SENSOR(outdoor_intake_temperature);
+         SUB_SENSOR(coolant_temperature);
       };
 
    } // namespace daikin
