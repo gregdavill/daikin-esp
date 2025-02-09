@@ -42,3 +42,16 @@ climate:
   - platform: daikin_ducted
     id: daikin0
     name: "Ducted AC"
+
+    outdoor_intake_temperature:
+      name: "Outdoor Intake Temperature"
+      filters:
+        - throttle_average: 60s
+    coolant_temperature:
+      name: "Coolant Temperature"
+      filters:
+        - throttle_average: 60s
+    indoor_temperature:
+      name: "Indoor Temperature"
+      filters:
+        - throttle_average: 60s
