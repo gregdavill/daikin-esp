@@ -1,5 +1,8 @@
 #include "daikin_ducted.h"
 #include "homebus_rmt.h"
+#include "p1p2_pkt.h"
+
+#include <cstring>
 
 namespace esphome
 {
@@ -8,13 +11,11 @@ namespace esphome
 
     static const char *const TAG = "daikin_ducted.climate";
 
-#define HOMEBUS_RX_GPIO_PIN GPIO_NUM_2
-#define HOMEBUS_TX_GPIO_PIN GPIO_NUM_3
+    // ==========================================================================
+    // CRC Calculation
+    // ==========================================================================
 
-#define BUTTON_PIN GPIO_NUM_9
-#define LED_PIN GPIO_NUM_4
-
-    const unsigned char crc_table[256] = {
+    static const uint8_t CRC_TABLE[256] = {
         0x00, 0xd0, 0x13, 0xc3, 0x26, 0xf6, 0x35, 0xe5, 0x4c, 0x9c, 0x5f, 0x8f,
         0x6a, 0xba, 0x79, 0xa9, 0x98, 0x48, 0x8b, 0x5b, 0xbe, 0x6e, 0xad, 0x7d,
         0xd4, 0x04, 0xc7, 0x17, 0xf2, 0x22, 0xe1, 0x31, 0x83, 0x53, 0x90, 0x40,
@@ -38,381 +39,473 @@ namespace esphome
         0x77, 0xa7, 0x64, 0xb4, 0x51, 0x81, 0x42, 0x92, 0x3b, 0xeb, 0x28, 0xf8,
         0x1d, 0xcd, 0x0e, 0xde};
 
-    uint8_t p1p2_crc(const uint8_t *src, unsigned int length)
+    static uint8_t calculate_crc(const uint8_t *data, size_t length)
     {
       uint8_t crc = 0;
-
-      for (uint i = 0; i < length; i++)
+      for (size_t i = 0; i < length; i++)
       {
-        crc = crc_table[(crc ^ *src++) & 0xFF];
+        crc = CRC_TABLE[(crc ^ data[i]) & 0xFF];
       }
       return crc;
     }
 
-    void DaikinClimate::callback(void *arg, const uint8_t buffer[], const uint32_t buffer_length)
+    static void finalize_and_send(HomebusRMT &bus, uint8_t *packet, size_t length)
     {
-      DaikinClimate *inst = (DaikinClimate *)arg;
+      packet[length - 1] = calculate_crc(packet, length - 1);
+      bus.write_bytes(packet, length);
+    }
 
-      // check crc
-      uint8_t packet_crc = buffer[buffer_length - 1];
-      uint8_t calc_crc = p1p2_crc(buffer, buffer_length - 1);
+    // ==========================================================================
+    // Protocol Conversion Helpers
+    // ==========================================================================
 
-      if (packet_crc != calc_crc)
+    static uint8_t climate_mode_to_p1p2(climate::ClimateMode mode)
+    {
+      switch (mode)
       {
-        ESP_LOGE(TAG, "Packet CRC error %02x != %02x (length = %lu)", packet_crc, calc_crc, buffer_length);
-
-        
-        ESP_LOG_BUFFER_HEXDUMP(TAG, buffer, 32, ESP_LOG_INFO);
-        return;
+      case climate::CLIMATE_MODE_FAN_ONLY:
+        return OperatingMode::FAN_ONLY;
+      case climate::CLIMATE_MODE_HEAT:
+        return OperatingMode::HEAT;
+      case climate::CLIMATE_MODE_COOL:
+        return OperatingMode::COOL;
+      case climate::CLIMATE_MODE_HEAT_COOL:
+        return OperatingMode::AUTO;
+      case climate::CLIMATE_MODE_DRY:
+        return OperatingMode::DRY;
+      default:
+        return OperatingMode::AUTO;
       }
+    }
 
-      if (buffer[0] == 0x00 && buffer[1] == 0x00 && buffer[2] == 0x11)
+    static climate::ClimateMode p1p2_to_climate_mode(uint8_t mode)
+    {
+      switch (mode)
       {
-        int16_t temp = (buffer[8] << 8 | buffer[9]);
+      case OperatingMode::FAN_ONLY:
+        return climate::CLIMATE_MODE_FAN_ONLY;
+      case OperatingMode::HEAT:
+        return climate::CLIMATE_MODE_HEAT;
+      case OperatingMode::COOL:
+        return climate::CLIMATE_MODE_COOL;
+      case OperatingMode::AUTO:
+        return climate::CLIMATE_MODE_HEAT_COOL;
+      case OperatingMode::DRY:
+        return climate::CLIMATE_MODE_DRY;
+      default:
+        return climate::CLIMATE_MODE_OFF;
+      }
+    }
 
-        ESP_LOGI(TAG, "indoor: %i.%02iC",
-                 temp / 256, ((temp & 0xFF) * 100) / 256);
+    static climate::ClimateAction p1p2_to_climate_action(uint8_t action)
+    {
+      switch (action)
+      {
+      case ActionState::HEATING:
+        return climate::CLIMATE_ACTION_HEATING;
+      case ActionState::COOLING:
+        return climate::CLIMATE_ACTION_COOLING;
+      case ActionState::IDLE:
+      default:
+        return climate::CLIMATE_ACTION_FAN;
+      }
+    }
 
-        float f_temperature = (float)buffer[8] + ((float)buffer[9] / 256.f);
-        inst->current_temperature = f_temperature;
+    static uint8_t climate_fan_to_p1p2(climate::ClimateFanMode fan_mode)
+    {
+      switch (fan_mode)
+      {
+      case climate::CLIMATE_FAN_LOW:
+        return FanSpeed::LOW;
+      case climate::CLIMATE_FAN_MEDIUM:
+        return FanSpeed::MEDIUM;
+      case climate::CLIMATE_FAN_HIGH:
+        return FanSpeed::HIGH;
+      default:
+        return FanSpeed::MEDIUM;
+      }
+    }
 
-        if(fabs(inst->last_temp_state - inst->current_temperature) > 0.08f){
-          inst->publish_state();
-          inst->last_temp_state = inst->current_temperature;
+    static climate::ClimateFanMode p1p2_to_climate_fan(uint8_t speed)
+    {
+      switch (speed & FanSpeed::MASK)
+      {
+      case FanSpeed::LOW:
+        return climate::CLIMATE_FAN_LOW;
+      case FanSpeed::MEDIUM:
+        return climate::CLIMATE_FAN_MEDIUM;
+      case FanSpeed::HIGH:
+        return climate::CLIMATE_FAN_HIGH;
+      default:
+        return climate::CLIMATE_FAN_MEDIUM;
+      }
+    }
+
+    static int p1p2_fan_to_speed_level(uint8_t speed)
+    {
+      switch (speed & FanSpeed::MASK)
+      {
+      case FanSpeed::LOW:
+        return 1;
+      case FanSpeed::MEDIUM:
+        return 2;
+      case FanSpeed::HIGH:
+        return 3;
+      default:
+        return 2;
+      }
+    }
+
+    // ==========================================================================
+    // Packet Handlers
+    // ==========================================================================
+
+    void DaikinClimate::handle_temperature_packet(const uint8_t *buffer, bool is_response)
+    {
+      size_t temp_offset = TemperaturePacket::INDOOR_TEMP_OFFSET;
+      float temperature = fixed_point_to_float(buffer[temp_offset], buffer[temp_offset + 1]);
+
+      if (is_response)
+      {
+        // Response packet: outdoor intake temperature
+        ESP_LOGI(TAG, "Outdoor intake: %.2fC", temperature);
+        if (this->outdoor_intake_temperature_sensor_ != nullptr)
+        {
+          this->outdoor_intake_temperature_sensor_->publish_state(temperature);
         }
 
-        if (inst->indoor_temperature_sensor_ != nullptr)
+        // Coolant temperature at different offset
+        float coolant_temp = fixed_point_to_float(
+            buffer[TemperaturePacket::COOLANT_TEMP_OFFSET],
+            buffer[TemperaturePacket::COOLANT_TEMP_OFFSET + 1]);
+        if (this->coolant_temperature_sensor_ != nullptr)
         {
-          inst->indoor_temperature_sensor_->publish_state(f_temperature);
+          this->coolant_temperature_sensor_->publish_state(coolant_temp);
         }
       }
-
-      if (buffer[0] == 0x40 && buffer[1] == 0x00 && buffer[2] == 0x11)
+      else
       {
-        int16_t temp = (buffer[8] << 8 | buffer[9]);
+        // Request packet: indoor temperature
+        ESP_LOGI(TAG, "Indoor: %.2fC", temperature);
+        this->current_temperature = temperature;
 
-        ESP_LOGI(TAG, "intake: %i.%02iC",
-                 temp / 256, ((temp & 0xFF) * 100) / 256);
-
-        float f_temperature = (float)buffer[8] + ((float)buffer[9] / 256.f);
-        if (inst->outdoor_intake_temperature_sensor_ != nullptr)
+        if (fabs(this->last_temp_state - this->current_temperature) > TEMP_PUBLISH_THRESHOLD)
         {
-          inst->outdoor_intake_temperature_sensor_->publish_state(f_temperature);
+          this->publish_state();
+          this->last_temp_state = this->current_temperature;
         }
 
-        float f_temperature0 = (float)buffer[14] + ((float)buffer[15] / 256.f);
-        if (inst->coolant_temperature_sensor_ != nullptr)
+        if (this->indoor_temperature_sensor_ != nullptr)
         {
-          inst->coolant_temperature_sensor_->publish_state(f_temperature0);
-        }
-      }
-
-
-      /* Targeting us */
-      if (buffer[0] == 0x00 && buffer[1] == 0xF0)
-      {
-
-        const uint8_t *payload = &buffer[3];
-
-        switch (buffer[2])
-        {
-        case 0x30:
-        {
-          ESP_LOGI(TAG, "Peripheral Ping, responding.");
-          uint8_t ping_response[] = {0x40, 0xF0, 0x30,
-                                     0xFF};
-
-          ping_response[sizeof(ping_response) - 1] = p1p2_crc(ping_response, sizeof(ping_response) - 1);
-          inst->homebus_.write_bytes(ping_response, sizeof(ping_response));
-
-          break;
-        }
-
-        case 0x38:
-        {
-          ESP_LOGI(TAG, "FXMQ control message (0x38)");
-
-          static int i = 0;
-          bool new_params = false;
-
-          uint8_t ping_response[] = {
-              0x40, 0xf0, 0x38,             // header
-              (uint8_t)(payload[0] & 0x01), // target status
-              payload[2],                   // target operating mode
-              payload[4],                   // target temperature_cooling
-              0x00,
-              payload[6], // target fan_speed
-              0x00,
-              payload[8], // target temperature_heating
-              0x00,
-              payload[10], // target heat_fan speed
-              payload[11], // unknown
-              0x00,
-              0x00,
-              0x00,
-              payload[15], // C0, E0 when payload[0] set to 1
-              0x00,
-              0x00,
-              0x00,
-              0xFF // crc byte
-          };
-
-          if (inst->mode_updated)
-          {
-            /* Set device from HA control */
-            bool pwr_on = false;
-            if (inst->mode != climate::CLIMATE_MODE_OFF)
-            {
-              pwr_on = true;
-            }
-
-            ping_response[3] = pwr_on;
-
-            if (inst->mode == climate::CLIMATE_MODE_FAN_ONLY)
-              ping_response[4] = 0x60;
-            if (inst->mode == climate::CLIMATE_MODE_HEAT)
-              ping_response[4] = 0x61;
-            if (inst->mode == climate::CLIMATE_MODE_COOL)
-              ping_response[4] = 0x62;
-            if (inst->mode == climate::CLIMATE_MODE_AUTO)
-              ping_response[4] = 0x63;
-            if (inst->mode == climate::CLIMATE_MODE_DRY)
-              ping_response[4] = 0x67;
-
-            ping_response[6] = 0x80;
-
-            inst->mode_updated = false;
-            new_params = true;
-          }
-          else
-          {
-            /* Set HA from device control */
-            auto new_mode = inst->mode;
-            if (payload[0] == 0)
-              new_mode = climate::CLIMATE_MODE_OFF;
-            else if (payload[2] == 0x60)
-              new_mode = climate::CLIMATE_MODE_FAN_ONLY;
-            else if (payload[2] == 0x61)
-              new_mode = climate::CLIMATE_MODE_HEAT;
-            else if (payload[2] == 0x62)
-              new_mode = climate::CLIMATE_MODE_COOL;
-            else if (payload[2] == 0x63)
-              new_mode = climate::CLIMATE_MODE_AUTO;
-            else if (payload[2] == 0x67)
-              new_mode = climate::CLIMATE_MODE_DRY;
-
-            if (new_mode != inst->mode)
-              new_params = true;
-            inst->mode = new_mode;
-
-            // Update fan entity state
-            if (inst->fan_ != nullptr)
-            {
-              bool fan_on = (new_mode == climate::CLIMATE_MODE_FAN_ONLY);
-              if (inst->fan_->state != fan_on)
-              {
-                inst->fan_->state = fan_on;
-                inst->fan_->publish_state();
-              }
-            }
-          }
-
-          {
-            /* Set HA from device control */
-            auto new_action = inst->action;
-            if (payload[0] == 0)
-              new_action = climate::CLIMATE_ACTION_OFF;
-            else if (payload[3] == 0x00)
-              new_action = climate::CLIMATE_ACTION_FAN;
-            else if (payload[3] == 0x01)
-              new_action = climate::CLIMATE_ACTION_HEATING;
-            else if (payload[3] == 0x02)
-              new_action = climate::CLIMATE_ACTION_COOLING;
-
-            if (new_action != inst->action)
-              new_params = true;
-            inst->action = new_action;
-          }
-
-          if (inst->fan_updated)
-          {
-            uint8_t fan_mode = 0;
-            if (inst->fan_mode == climate::CLIMATE_FAN_LOW)
-              fan_mode = 0x10;
-            else if (inst->fan_mode == climate::CLIMATE_FAN_MEDIUM)
-              fan_mode = 0x30;
-            else if (inst->fan_mode == climate::CLIMATE_FAN_HIGH)
-              fan_mode = 0x50;
-
-            ping_response[7] = (payload[6] & ~0x70) | fan_mode | 0x80;
-            ping_response[11] = (payload[10] & ~0x70) | fan_mode | 0x80;
-            inst->fan_updated = false;
-            new_params = true;
-          }
-          else
-          {
-            auto new_fan_mode = inst->fan_mode;
-            int new_fan_speed = 1;
-            if ((payload[6] & 0x70) == 0x10)
-            {
-              new_fan_mode = climate::CLIMATE_FAN_LOW;
-              new_fan_speed = 1;
-            }
-            if ((payload[6] & 0x70) == 0x30)
-            {
-              new_fan_mode = climate::CLIMATE_FAN_MEDIUM;
-              new_fan_speed = 2;
-            }
-            if ((payload[6] & 0x70) == 0x50)
-            {
-              new_fan_mode = climate::CLIMATE_FAN_HIGH;
-              new_fan_speed = 3;
-            }
-
-            if (new_fan_mode != inst->fan_mode)
-              new_params = true;
-            inst->fan_mode = new_fan_mode;
-
-            // Update fan entity speed
-            if (inst->fan_ != nullptr && inst->fan_->speed != new_fan_speed)
-            {
-              inst->fan_->speed = new_fan_speed;
-              inst->fan_->publish_state();
-            }
-          }
-
-          if (inst->target_temperature_updated)
-          {
-            if (inst->mode == climate::CLIMATE_MODE_COOL)
-              ping_response[5] = inst->target_temperature;
-            if (inst->mode == climate::CLIMATE_MODE_HEAT)
-              ping_response[9] = inst->target_temperature;
-
-            inst->target_temperature_updated = false;
-            new_params = true;
-          }
-          else
-          {
-            uint8_t new_target_temperature = inst->target_temperature;
-
-            if (inst->mode == climate::CLIMATE_MODE_COOL)
-              new_target_temperature = payload[4];
-            if (inst->mode == climate::CLIMATE_MODE_HEAT)
-              new_target_temperature = payload[8];
-
-            if (new_target_temperature != inst->target_temperature)
-              new_params = true;
-            inst->target_temperature = new_target_temperature;
-          }
-
-          /* Transmit control packet to device */
-
-          if (ping_response[3])
-          {
-            ping_response[16] |= 0x20;
-          }
-
-          ping_response[sizeof(ping_response) - 1] = p1p2_crc(ping_response, sizeof(ping_response) - 1);
-          inst->homebus_.write_bytes(ping_response, sizeof(ping_response));
-
-          if (new_params)
-          {
-            new_params = false;
-            inst->publish_state();
-
-            // Sync state to auxiliary climate (HomeKit-compatible, no FAN_ONLY/DRY)
-            if (inst->aux_climate_ != nullptr)
-            {
-              // Map FAN_ONLY and DRY to OFF for HomeKit compatibility
-              if (inst->mode == climate::CLIMATE_MODE_FAN_ONLY ||
-                  inst->mode == climate::CLIMATE_MODE_DRY)
-              {
-                inst->aux_climate_->mode = climate::CLIMATE_MODE_OFF;
-              }
-              else
-              {
-                inst->aux_climate_->mode = inst->mode;
-              }
-              inst->aux_climate_->target_temperature = inst->target_temperature;
-              inst->aux_climate_->current_temperature = inst->current_temperature;
-              inst->aux_climate_->fan_mode = inst->fan_mode;
-              inst->aux_climate_->action = inst->action;
-              inst->aux_climate_->publish_state();
-            }
-          }
-          break;
-        }
-
-        case 0x39:
-        {
-          ESP_LOGI(TAG, "Peripheral counter_alarm");
-
-          uint8_t ping_response[] = {0x40, 0xF0, 0x39,
-                                     0x00, 0x00, 0x00, 0x00, 0x00, 0xFF};
-          ping_response[sizeof(ping_response) - 1] = p1p2_crc(ping_response, sizeof(ping_response) - 1);
-
-          inst->homebus_.write_bytes(ping_response, sizeof(ping_response));
-          break;
-        }
-
-        case 0x32:
-        {
-          ESP_LOGI(TAG, "Peripheral (0x32)");
-
-          uint8_t ping_response[] = {0x40, 0xF0, 0x32,
-                                     0x01, 0xFF};
-          ping_response[sizeof(ping_response) - 1] = p1p2_crc(ping_response, sizeof(ping_response) - 1);
-
-          inst->homebus_.write_bytes(ping_response, sizeof(ping_response));
-          break;
-        }
-
-        case 0x3a:
-        {
-          ESP_LOGI(TAG, "Peripheral (0x3A)");
-
-          uint8_t ping_response[] = {0x40, 0xF0, 0x3a,
-                                     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF};
-          ping_response[sizeof(ping_response) - 1] = p1p2_crc(ping_response, sizeof(ping_response) - 1);
-
-          inst->homebus_.write_bytes(ping_response, sizeof(ping_response));
-          break;
-        }
-
-        case 0x35:
-        {
-          ESP_LOGI(TAG, "Outside Name(0x35): %s", &buffer[3]);
-
-          uint8_t ping_response[] = {0x40, 0xF0, 0x35,
-                                     0xFF};
-          ping_response[sizeof(ping_response) - 1] = p1p2_crc(ping_response, sizeof(ping_response) - 1);
-
-          inst->homebus_.write_bytes(ping_response, sizeof(ping_response));
-          break;
-        }
-        case 0x36:
-        {
-          ESP_LOGI(TAG, "Inside Name(0x36): %s", &buffer[3]);
-
-          uint8_t ping_response[] = {0x40, 0xF0, 0x36,
-                                     0xFF};
-          ping_response[sizeof(ping_response) - 1] = p1p2_crc(ping_response, sizeof(ping_response) - 1);
-
-          inst->homebus_.write_bytes(ping_response, sizeof(ping_response));
-          break;
-        }
-
-        default:
-          ESP_LOGVV(TAG, "header=%02x%02x%02x (size=%lu)", buffer[0], buffer[1], buffer[2], buffer_length);
-          return;
+          this->indoor_temperature_sensor_->publish_state(temperature);
         }
       }
     }
 
-    DaikinClimate::DaikinClimate()
-        : climate::Climate()
+    void DaikinClimate::handle_control_packet(const uint8_t *payload)
     {
-      this->target_temperature = 25;
+      ESP_LOGI(TAG, "Control message (0x38)");
+
+      bool state_changed = false;
+
+      // Build response packet, starting with current values from request
+      ControlResponse response = {
+          .header = {Direction::RESPONSE, Address::AUX_CONTROLLER, PacketType::OPERATION_CONTROL},
+          .power_status = static_cast<uint8_t>(payload[ControlRequest::POWER_STATUS] & PowerState::ON),
+          .operating_mode = payload[ControlRequest::OPERATING_MODE],
+          .cooling_setpoint = payload[ControlRequest::COOLING_SETPOINT],
+          .reserved_6 = 0x00,
+          .cooling_fan_speed = payload[ControlRequest::COOLING_FAN_SPEED],
+          .reserved_8 = 0x00,
+          .heating_setpoint = payload[ControlRequest::HEATING_SETPOINT],
+          .reserved_10 = 0x00,
+          .heating_fan_speed = payload[ControlRequest::HEATING_FAN_SPEED],
+          .unknown_12 = payload[ControlRequest::UNKNOWN_11],
+          .reserved_13 = 0x00,
+          .reserved_14 = 0x00,
+          .reserved_15 = 0x00,
+          .status_flags = payload[ControlRequest::STATUS_FLAGS],
+          .reserved_17 = 0x00,
+          .reserved_18 = 0x00,
+          .reserved_19 = 0x00,
+          .crc = 0xFF};
+
+      // Handle mode changes
+      if (this->mode_updated)
+      {
+        response.power_status = (this->mode != climate::CLIMATE_MODE_OFF) ? PowerState::ON : PowerState::OFF;
+        response.operating_mode = climate_mode_to_p1p2(this->mode);
+        response.reserved_6 = FanSpeed::CHANGED_FLAG; // Signal mode change
+        this->mode_updated = false;
+        state_changed = true;
+      }
+      else
+      {
+        // Read mode from device
+        climate::ClimateMode new_mode;
+        if (payload[ControlRequest::POWER_STATUS] == PowerState::OFF)
+        {
+          new_mode = climate::CLIMATE_MODE_OFF;
+        }
+        else
+        {
+          new_mode = p1p2_to_climate_mode(payload[ControlRequest::OPERATING_MODE]);
+        }
+
+        if (new_mode != this->mode)
+        {
+          this->mode = new_mode;
+          state_changed = true;
+        }
+
+        // Sync fan entity state
+        if (this->fan_ != nullptr)
+        {
+          bool fan_on = (new_mode == climate::CLIMATE_MODE_FAN_ONLY);
+          if (this->fan_->state != fan_on)
+          {
+            this->fan_->state = fan_on;
+            this->fan_->publish_state();
+          }
+        }
+      }
+
+      // Handle action state (always read from device)
+      climate::ClimateAction new_action;
+      if (payload[ControlRequest::POWER_STATUS] == PowerState::OFF)
+      {
+        new_action = climate::CLIMATE_ACTION_OFF;
+      }
+      else
+      {
+        new_action = p1p2_to_climate_action(payload[ControlRequest::CURRENT_ACTION]);
+      }
+
+      if (new_action != this->action)
+      {
+        this->action = new_action;
+        state_changed = true;
+      }
+
+      // Handle fan speed changes
+      if (this->fan_updated)
+      {
+        uint8_t fan_speed = climate_fan_to_p1p2(this->fan_mode.value_or(climate::CLIMATE_FAN_MEDIUM));
+        uint8_t speed_with_flag = fan_speed | FanSpeed::CHANGED_FLAG;
+
+        response.cooling_fan_speed = (payload[ControlRequest::COOLING_FAN_SPEED] & ~FanSpeed::MASK) | speed_with_flag;
+        response.heating_fan_speed = (payload[ControlRequest::HEATING_FAN_SPEED] & ~FanSpeed::MASK) | speed_with_flag;
+
+        this->fan_updated = false;
+        state_changed = true;
+      }
+      else
+      {
+        // Read fan speed from device
+        auto new_fan_mode = p1p2_to_climate_fan(payload[ControlRequest::COOLING_FAN_SPEED]);
+        int new_fan_speed = p1p2_fan_to_speed_level(payload[ControlRequest::COOLING_FAN_SPEED]);
+
+        if (new_fan_mode != this->fan_mode)
+        {
+          this->fan_mode = new_fan_mode;
+          state_changed = true;
+        }
+
+        // Sync fan entity speed
+        if (this->fan_ != nullptr && this->fan_->speed != new_fan_speed)
+        {
+          this->fan_->speed = new_fan_speed;
+          this->fan_->publish_state();
+        }
+      }
+
+      // Handle target temperature changes
+      if (this->target_temperature_updated)
+      {
+        if (this->mode == climate::CLIMATE_MODE_COOL)
+        {
+          response.cooling_setpoint = static_cast<uint8_t>(this->target_temperature);
+        }
+        else if (this->mode == climate::CLIMATE_MODE_HEAT)
+        {
+          response.heating_setpoint = static_cast<uint8_t>(this->target_temperature);
+        }
+
+        this->target_temperature_updated = false;
+        state_changed = true;
+      }
+      else
+      {
+        // Read target temperature from device based on mode
+        uint8_t new_target = this->target_temperature;
+
+        if (this->mode == climate::CLIMATE_MODE_COOL)
+        {
+          new_target = payload[ControlRequest::COOLING_SETPOINT];
+        }
+        else if (this->mode == climate::CLIMATE_MODE_HEAT)
+        {
+          new_target = payload[ControlRequest::HEATING_SETPOINT];
+        }
+
+        if (new_target != static_cast<uint8_t>(this->target_temperature))
+        {
+          this->target_temperature = new_target;
+          state_changed = true;
+        }
+      }
+
+      // Set status flag when power is on
+      if (response.power_status == PowerState::ON)
+      {
+        response.status_flags |= StatusFlags::POWER_ON;
+      }
+
+      // Send response
+      finalize_and_send(this->homebus_, reinterpret_cast<uint8_t *>(&response), sizeof(response));
+
+      // Publish state changes
+      if (state_changed)
+      {
+        this->publish_state();
+        this->sync_auxiliary_climate();
+      }
+    }
+
+    void DaikinClimate::sync_auxiliary_climate()
+    {
+      if (this->aux_climate_ == nullptr)
+        return;
+
+      // Map FAN_ONLY and DRY to OFF for HomeKit compatibility
+      if (this->mode == climate::CLIMATE_MODE_FAN_ONLY ||
+          this->mode == climate::CLIMATE_MODE_DRY)
+      {
+        this->aux_climate_->mode = climate::CLIMATE_MODE_OFF;
+      }
+      else
+      {
+        this->aux_climate_->mode = this->mode;
+      }
+
+      this->aux_climate_->target_temperature = this->target_temperature;
+      this->aux_climate_->current_temperature = this->current_temperature;
+      this->aux_climate_->fan_mode = this->fan_mode;
+      this->aux_climate_->action = this->action;
+      this->aux_climate_->publish_state();
+    }
+
+    void DaikinClimate::send_simple_response(uint8_t packet_type)
+    {
+      uint8_t response[] = {Direction::RESPONSE, Address::AUX_CONTROLLER, packet_type, 0xFF};
+      finalize_and_send(this->homebus_, response, sizeof(response));
+    }
+
+    void DaikinClimate::send_simple_response(uint8_t packet_type, const uint8_t *data, size_t data_len)
+    {
+      uint8_t response[16] = {Direction::RESPONSE, Address::AUX_CONTROLLER, packet_type};
+      memcpy(&response[3], data, data_len);
+      response[3 + data_len] = 0xFF; // CRC placeholder
+      finalize_and_send(this->homebus_, response, 3 + data_len + 1);
+    }
+
+    // ==========================================================================
+    // Main Callback
+    // ==========================================================================
+
+    void DaikinClimate::callback(void *arg, const uint8_t buffer[], const uint32_t buffer_length)
+    {
+      DaikinClimate *self = static_cast<DaikinClimate *>(arg);
+
+      // Validate CRC
+      uint8_t received_crc = buffer[buffer_length - 1];
+      uint8_t calculated_crc = calculate_crc(buffer, buffer_length - 1);
+
+      if (received_crc != calculated_crc)
+      {
+        ESP_LOGE(TAG, "CRC error: received 0x%02X, calculated 0x%02X (len=%lu)",
+                 received_crc, calculated_crc, buffer_length);
+        ESP_LOG_BUFFER_HEXDUMP(TAG, buffer, 32, ESP_LOG_INFO);
+        return;
+      }
+
+      uint8_t direction = buffer[0];
+      uint8_t address = buffer[1];
+      uint8_t packet_type = buffer[2];
+
+      // Handle temperature packets (from main controller, address 0x00)
+      if (address == Address::MAIN_CONTROLLER && packet_type == PacketType::TEMPERATURES)
+      {
+        bool is_response = (direction == Direction::RESPONSE);
+        self->handle_temperature_packet(buffer, is_response);
+        return;
+      }
+
+      // Handle packets addressed to us (auxiliary controller, address 0xF0)
+      if (direction == Direction::REQUEST && address == Address::AUX_CONTROLLER)
+      {
+        const uint8_t *payload = &buffer[3];
+
+        switch (packet_type)
+        {
+        case PacketType::POLL_AUX:
+          ESP_LOGI(TAG, "Poll auxiliary controller");
+          self->send_simple_response(PacketType::POLL_AUX);
+          break;
+
+        case PacketType::OPERATION_CONTROL:
+          self->handle_control_packet(payload);
+          break;
+
+        case PacketType::COUNTER_ALARM:
+        {
+          ESP_LOGI(TAG, "Counter/alarm request");
+          const uint8_t data[] = {0x00, 0x00, 0x00, 0x00, 0x00};
+          self->send_simple_response(PacketType::COUNTER_ALARM, data, sizeof(data));
+          break;
+        }
+
+        case PacketType::UNKNOWN_32:
+        {
+          ESP_LOGI(TAG, "Unknown packet 0x32");
+          const uint8_t data[] = {0x01};
+          self->send_simple_response(PacketType::UNKNOWN_32, data, sizeof(data));
+          break;
+        }
+
+        case PacketType::UNKNOWN_3A:
+        {
+          ESP_LOGI(TAG, "Unknown packet 0x3A");
+          const uint8_t data[] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+          self->send_simple_response(PacketType::UNKNOWN_3A, data, sizeof(data));
+          break;
+        }
+
+        case PacketType::OUTDOOR_UNIT_NAME:
+          ESP_LOGI(TAG, "Outdoor unit name: %s", reinterpret_cast<const char *>(payload));
+          self->send_simple_response(PacketType::OUTDOOR_UNIT_NAME);
+          break;
+
+        case PacketType::INDOOR_UNIT_NAME:
+          ESP_LOGI(TAG, "Indoor unit name: %s", reinterpret_cast<const char *>(payload));
+          self->send_simple_response(PacketType::INDOOR_UNIT_NAME);
+          break;
+
+        default:
+          ESP_LOGVV(TAG, "Unhandled packet: dir=0x%02X addr=0x%02X type=0x%02X len=%lu",
+                    direction, address, packet_type, buffer_length);
+          break;
+        }
+      }
+    }
+
+    // ==========================================================================
+    // DaikinClimate Implementation
+    // ==========================================================================
+
+    DaikinClimate::DaikinClimate() : climate::Climate()
+    {
+      this->target_temperature = DEFAULT_TARGET_TEMPERATURE;
     }
 
     void DaikinClimate::setup()
@@ -420,7 +513,7 @@ namespace esphome
       ESP_LOGI(TAG, "DaikinClimate::setup() starting");
       this->homebus_.register_callback(DaikinClimate::callback, this);
       this->homebus_.setup();
-      ESP_LOGI(TAG, "DaikinClimate::setup() complete, homebus installed");
+      ESP_LOGI(TAG, "DaikinClimate::setup() complete");
     }
 
     void DaikinClimate::loop()
@@ -436,7 +529,6 @@ namespace esphome
 
     void DaikinClimate::control(const climate::ClimateCall &call)
     {
-
       if (call.get_fan_mode().has_value())
       {
         this->fan_mode = *call.get_fan_mode();
@@ -460,23 +552,29 @@ namespace esphome
     {
       auto traits = climate::ClimateTraits();
       traits.set_supports_current_temperature(true);
-      traits.set_supported_modes({climate::CLIMATE_MODE_OFF,
-                                  climate::CLIMATE_MODE_COOL,
-                                  climate::CLIMATE_MODE_HEAT,
-                                  climate::CLIMATE_MODE_HEAT_COOL,
-                                  climate::CLIMATE_MODE_DRY,
-                                  climate::CLIMATE_MODE_FAN_ONLY});
-      traits.set_supported_fan_modes({climate::CLIMATE_FAN_LOW,
-                                      climate::CLIMATE_FAN_MEDIUM,
-                                      climate::CLIMATE_FAN_HIGH});
+      traits.set_supported_modes({
+          climate::CLIMATE_MODE_OFF,
+          climate::CLIMATE_MODE_COOL,
+          climate::CLIMATE_MODE_HEAT,
+          climate::CLIMATE_MODE_HEAT_COOL,
+          climate::CLIMATE_MODE_DRY,
+          climate::CLIMATE_MODE_FAN_ONLY,
+      });
+      traits.set_supported_fan_modes({
+          climate::CLIMATE_FAN_LOW,
+          climate::CLIMATE_FAN_MEDIUM,
+          climate::CLIMATE_FAN_HIGH,
+      });
       traits.set_supports_action(true);
-      traits.set_visual_min_temperature(18.0);
-      traits.set_visual_max_temperature(28.0);
-      traits.set_visual_target_temperature_step(1.0);
+      traits.set_visual_min_temperature(MIN_TEMPERATURE);
+      traits.set_visual_max_temperature(MAX_TEMPERATURE);
+      traits.set_visual_target_temperature_step(TEMPERATURE_STEP);
       return traits;
     }
 
-    // DaikinClimateHomeKit implementation
+    // ==========================================================================
+    // DaikinClimateHomeKit Implementation
+    // ==========================================================================
 
     void DaikinClimateHomeKit::dump_config()
     {
@@ -488,7 +586,6 @@ namespace esphome
       if (this->parent_ == nullptr)
         return;
 
-      // Forward control to parent DaikinClimate
       auto parent_call = this->parent_->make_call();
 
       if (call.get_mode().has_value())
@@ -508,21 +605,27 @@ namespace esphome
       auto traits = climate::ClimateTraits();
       traits.set_supports_current_temperature(true);
       // HomeKit-compatible modes only (no FAN_ONLY or DRY)
-      traits.set_supported_modes({climate::CLIMATE_MODE_OFF,
-                                  climate::CLIMATE_MODE_COOL,
-                                  climate::CLIMATE_MODE_HEAT,
-                                  climate::CLIMATE_MODE_HEAT_COOL});
-      traits.set_supported_fan_modes({climate::CLIMATE_FAN_LOW,
-                                      climate::CLIMATE_FAN_MEDIUM,
-                                      climate::CLIMATE_FAN_HIGH});
+      traits.set_supported_modes({
+          climate::CLIMATE_MODE_OFF,
+          climate::CLIMATE_MODE_COOL,
+          climate::CLIMATE_MODE_HEAT,
+          climate::CLIMATE_MODE_HEAT_COOL,
+      });
+      traits.set_supported_fan_modes({
+          climate::CLIMATE_FAN_LOW,
+          climate::CLIMATE_FAN_MEDIUM,
+          climate::CLIMATE_FAN_HIGH,
+      });
       traits.set_supports_action(true);
-      traits.set_visual_min_temperature(18.0);
-      traits.set_visual_max_temperature(28.0);
-      traits.set_visual_target_temperature_step(1.0);
+      traits.set_visual_min_temperature(MIN_TEMPERATURE);
+      traits.set_visual_max_temperature(MAX_TEMPERATURE);
+      traits.set_visual_target_temperature_step(TEMPERATURE_STEP);
       return traits;
     }
 
-    // DaikinFan implementation
+    // ==========================================================================
+    // DaikinFan Implementation
+    // ==========================================================================
 
     void DaikinFan::dump_config()
     {
@@ -547,21 +650,24 @@ namespace esphome
       if (call.get_state().has_value())
       {
         bool fan_on = *call.get_state();
-        if (fan_on)
-          parent_call.set_mode(climate::CLIMATE_MODE_FAN_ONLY);
-        else
-          parent_call.set_mode(climate::CLIMATE_MODE_OFF);
+        parent_call.set_mode(fan_on ? climate::CLIMATE_MODE_FAN_ONLY : climate::CLIMATE_MODE_OFF);
       }
 
       if (call.get_speed().has_value())
       {
         int speed = *call.get_speed();
-        if (speed == 1)
+        switch (speed)
+        {
+        case 1:
           parent_call.set_fan_mode(climate::CLIMATE_FAN_LOW);
-        else if (speed == 2)
+          break;
+        case 2:
           parent_call.set_fan_mode(climate::CLIMATE_FAN_MEDIUM);
-        else if (speed == 3)
+          break;
+        case 3:
           parent_call.set_fan_mode(climate::CLIMATE_FAN_HIGH);
+          break;
+        }
       }
 
       parent_call.perform();
