@@ -382,16 +382,17 @@ namespace esphome
           this->mode == climate::CLIMATE_MODE_DRY)
       {
         this->aux_climate_->mode = climate::CLIMATE_MODE_OFF;
+        this->aux_climate_->action = climate::CLIMATE_ACTION_OFF;
       }
       else
       {
         this->aux_climate_->mode = this->mode;
+        this->aux_climate_->action = this->action;
       }
 
       this->aux_climate_->target_temperature = this->target_temperature;
       this->aux_climate_->current_temperature = this->current_temperature;
       this->aux_climate_->fan_mode = this->fan_mode;
-      this->aux_climate_->action = this->action;
       this->aux_climate_->publish_state();
     }
 
