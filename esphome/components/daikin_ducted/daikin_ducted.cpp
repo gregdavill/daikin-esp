@@ -204,6 +204,17 @@ namespace esphome
             if (new_mode != inst->mode)
               new_params = true;
             inst->mode = new_mode;
+
+            // Update fan entity state
+            if (inst->fan_ != nullptr)
+            {
+              bool fan_on = (new_mode == climate::CLIMATE_MODE_FAN_ONLY);
+              if (inst->fan_->state != fan_on)
+              {
+                inst->fan_->state = fan_on;
+                inst->fan_->publish_state();
+              }
+            }
           }
 
           {
@@ -241,16 +252,33 @@ namespace esphome
           else
           {
             auto new_fan_mode = inst->fan_mode;
+            int new_fan_speed = 1;
             if ((payload[6] & 0x70) == 0x10)
+            {
               new_fan_mode = climate::CLIMATE_FAN_LOW;
+              new_fan_speed = 1;
+            }
             if ((payload[6] & 0x70) == 0x30)
+            {
               new_fan_mode = climate::CLIMATE_FAN_MEDIUM;
+              new_fan_speed = 2;
+            }
             if ((payload[6] & 0x70) == 0x50)
+            {
               new_fan_mode = climate::CLIMATE_FAN_HIGH;
+              new_fan_speed = 3;
+            }
 
             if (new_fan_mode != inst->fan_mode)
               new_params = true;
             inst->fan_mode = new_fan_mode;
+
+            // Update fan entity speed
+            if (inst->fan_ != nullptr && inst->fan_->speed != new_fan_speed)
+            {
+              inst->fan_->speed = new_fan_speed;
+              inst->fan_->publish_state();
+            }
           }
 
           if (inst->target_temperature_updated)
@@ -291,6 +319,26 @@ namespace esphome
           {
             new_params = false;
             inst->publish_state();
+
+            // Sync state to auxiliary climate (HomeKit-compatible, no FAN_ONLY/DRY)
+            if (inst->aux_climate_ != nullptr)
+            {
+              // Map FAN_ONLY and DRY to OFF for HomeKit compatibility
+              if (inst->mode == climate::CLIMATE_MODE_FAN_ONLY ||
+                  inst->mode == climate::CLIMATE_MODE_DRY)
+              {
+                inst->aux_climate_->mode = climate::CLIMATE_MODE_OFF;
+              }
+              else
+              {
+                inst->aux_climate_->mode = inst->mode;
+              }
+              inst->aux_climate_->target_temperature = inst->target_temperature;
+              inst->aux_climate_->current_temperature = inst->current_temperature;
+              inst->aux_climate_->fan_mode = inst->fan_mode;
+              inst->aux_climate_->action = inst->action;
+              inst->aux_climate_->publish_state();
+            }
           }
           break;
         }
@@ -426,6 +474,97 @@ namespace esphome
       traits.set_visual_max_temperature(28.0);
       traits.set_visual_target_temperature_step(1.0);
       return traits;
+    }
+
+    // DaikinClimateHomeKit implementation
+
+    void DaikinClimateHomeKit::dump_config()
+    {
+      ESP_LOGCONFIG(TAG, "Daikin Climate HomeKit:");
+    }
+
+    void DaikinClimateHomeKit::control(const climate::ClimateCall &call)
+    {
+      if (this->parent_ == nullptr)
+        return;
+
+      // Forward control to parent DaikinClimate
+      auto parent_call = this->parent_->make_call();
+
+      if (call.get_mode().has_value())
+        parent_call.set_mode(*call.get_mode());
+
+      if (call.get_target_temperature().has_value())
+        parent_call.set_target_temperature(*call.get_target_temperature());
+
+      if (call.get_fan_mode().has_value())
+        parent_call.set_fan_mode(*call.get_fan_mode());
+
+      parent_call.perform();
+    }
+
+    climate::ClimateTraits DaikinClimateHomeKit::traits()
+    {
+      auto traits = climate::ClimateTraits();
+      traits.set_supports_current_temperature(true);
+      // HomeKit-compatible modes only (no FAN_ONLY or DRY)
+      traits.set_supported_modes({climate::CLIMATE_MODE_OFF,
+                                  climate::CLIMATE_MODE_COOL,
+                                  climate::CLIMATE_MODE_HEAT,
+                                  climate::CLIMATE_MODE_HEAT_COOL});
+      traits.set_supported_fan_modes({climate::CLIMATE_FAN_LOW,
+                                      climate::CLIMATE_FAN_MEDIUM,
+                                      climate::CLIMATE_FAN_HIGH});
+      traits.set_supports_action(true);
+      traits.set_visual_min_temperature(18.0);
+      traits.set_visual_max_temperature(28.0);
+      traits.set_visual_target_temperature_step(1.0);
+      return traits;
+    }
+
+    // DaikinFan implementation
+
+    void DaikinFan::dump_config()
+    {
+      ESP_LOGCONFIG(TAG, "Daikin Fan:");
+    }
+
+    fan::FanTraits DaikinFan::get_traits()
+    {
+      auto traits = fan::FanTraits();
+      traits.set_speed(true);
+      traits.set_supported_speed_count(3);
+      return traits;
+    }
+
+    void DaikinFan::control(const fan::FanCall &call)
+    {
+      if (this->parent_ == nullptr)
+        return;
+
+      auto parent_call = this->parent_->make_call();
+
+      if (call.get_state().has_value())
+      {
+        bool fan_on = *call.get_state();
+        if (fan_on)
+          parent_call.set_mode(climate::CLIMATE_MODE_FAN_ONLY);
+        else
+          parent_call.set_mode(climate::CLIMATE_MODE_OFF);
+      }
+
+      if (call.get_speed().has_value())
+      {
+        int speed = *call.get_speed();
+        if (speed == 1)
+          parent_call.set_fan_mode(climate::CLIMATE_FAN_LOW);
+        else if (speed == 2)
+          parent_call.set_fan_mode(climate::CLIMATE_FAN_MEDIUM);
+        else if (speed == 3)
+          parent_call.set_fan_mode(climate::CLIMATE_FAN_HIGH);
+      }
+
+      parent_call.perform();
     }
 
   } // namespace daikin_ducted

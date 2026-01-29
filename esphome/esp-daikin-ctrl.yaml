@@ -15,7 +15,7 @@ esp32:
 # Enable logging
 logger:
   level: VERY_VERBOSE
-  hardware_uart: USB_SERIAL_JTAG
+  hardware_uart: UART0
   baud_rate: 2500000
 
 #Enable Home Assistant API
@@ -42,6 +42,12 @@ climate:
   - platform: daikin_ducted
     id: daikin0
     name: "Ducted AC"
+
+    homekit_climate:
+      name: "Ducted AC HomeKit"
+
+    homekit_fan:
+      name: "Ducted AC Fan"
 
     outdoor_intake_temperature:
       name: "Outdoor Intake Temperature"

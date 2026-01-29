@@ -1,9 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import climate
-from esphome.const import CONF_ID
-
-from esphome.components import sensor
+from esphome.components import climate, fan, sensor
 from esphome.const import (
     CONF_ID,
     UNIT_CELSIUS,
@@ -12,11 +9,15 @@ from esphome.const import (
     STATE_CLASS_MEASUREMENT,
 )
 
+CONF_HOMEKIT_CLIMATE = "homekit_climate"
+CONF_HOMEKIT_FAN = "homekit_fan"
 
-AUTO_LOAD = ["climate", "sensor"]
+AUTO_LOAD = ["climate", "fan", "sensor"]
 
 daikin_ns = cg.esphome_ns.namespace("daikin_ducted")
 DaikinClimate = daikin_ns.class_("DaikinClimate", climate.Climate, cg.Component)
+DaikinClimateHomeKit = daikin_ns.class_("DaikinClimateHomeKit", climate.Climate, cg.Component)
+DaikinFan = daikin_ns.class_("DaikinFan", fan.Fan, cg.Component)
 
 CONFIG_SCHEMA = climate.climate_schema(DaikinClimate).extend(
     {
@@ -41,6 +42,8 @@ CONFIG_SCHEMA = climate.climate_schema(DaikinClimate).extend(
             device_class=DEVICE_CLASS_TEMPERATURE,
             state_class=STATE_CLASS_MEASUREMENT,
         ),
+        cv.Optional(CONF_HOMEKIT_CLIMATE): climate.climate_schema(DaikinClimateHomeKit),
+        cv.Optional(CONF_HOMEKIT_FAN): fan.fan_schema(DaikinFan),
     }
 )
 
@@ -59,3 +62,19 @@ async def to_code(config):
         if key in config:
             sens = await sensor.new_sensor(config[key])
             cg.add(getattr(var, funcName)(sens))
+
+    if CONF_HOMEKIT_CLIMATE in config:
+        hk_config = config[CONF_HOMEKIT_CLIMATE]
+        hk_var = cg.new_Pvariable(hk_config[CONF_ID])
+        await cg.register_component(hk_var, hk_config)
+        await climate.register_climate(hk_var, hk_config)
+        cg.add(hk_var.set_parent(var))
+        cg.add(var.set_auxiliary_climate(hk_var))
+
+    if CONF_HOMEKIT_FAN in config:
+        fan_config = config[CONF_HOMEKIT_FAN]
+        fan_var = cg.new_Pvariable(fan_config[CONF_ID])
+        await cg.register_component(fan_var, fan_config)
+        await fan.register_fan(fan_var, fan_config)
+        cg.add(fan_var.set_parent(var))
+        cg.add(var.set_fan(fan_var))
