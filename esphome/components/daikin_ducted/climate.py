@@ -18,9 +18,8 @@ AUTO_LOAD = ["climate", "sensor"]
 daikin_ns = cg.esphome_ns.namespace("daikin_ducted")
 DaikinClimate = daikin_ns.class_("DaikinClimate", climate.Climate)
 
-CONFIG_SCHEMA = climate.CLIMATE_SCHEMA.extend(
+CONFIG_SCHEMA = climate.climate_schema(DaikinClimate).extend(
     {
-        cv.GenerateID(): cv.declare_id(DaikinClimate),
         cv.Optional("outdoor_intake_temperature"): sensor.sensor_schema(
             unit_of_measurement=UNIT_CELSIUS,
             icon=ICON_THERMOMETER,
