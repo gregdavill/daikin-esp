@@ -56,11 +56,6 @@ namespace esphome
 
     */
 
-    static inline int countSetBits(unsigned int n)
-    {
-      return __builtin_popcount(n);
-    }
-
     static void print_packet(const uint8_t *buffer, const uint32_t buffer_length)
     {
       // Each byte needs 3 chars ("xx "), plus prefix (~15) and suffix
@@ -163,7 +158,7 @@ namespace esphome
             ESP_LOGE(TAG, "  symbol[%u](dur0=%u, dur1=%u)", i, rmt_symbols[i].duration0, rmt_symbols[i].duration1);
           return 0;
         }
-        if ((countSetBits(decoded_byte) & 1) == 0)
+        if ((__builtin_popcount(decoded_byte) & 1) == 0)
         {
           ESP_LOGE(TAG, "Bad parity");
           return 0;
