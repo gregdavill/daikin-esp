@@ -365,10 +365,25 @@ namespace esphome
         : climate::Climate()
     {
       this->target_temperature = 25;
+    }
 
+    void DaikinClimate::setup()
+    {
+      ESP_LOGI(TAG, "DaikinClimate::setup() starting");
       this->homebus_.register_callback(DaikinClimate::callback, this);
       this->homebus_.setup();
-      ESP_LOGI(TAG, "homebus installed");
+      ESP_LOGI(TAG, "DaikinClimate::setup() complete, homebus installed");
+    }
+
+    void DaikinClimate::loop()
+    {
+      this->homebus_.loop();
+    }
+
+    void DaikinClimate::dump_config()
+    {
+      ESP_LOGCONFIG(TAG, "Daikin Ducted Climate:");
+      this->homebus_.dump_config();
     }
 
     void DaikinClimate::control(const climate::ClimateCall &call)

@@ -16,7 +16,7 @@ from esphome.const import (
 AUTO_LOAD = ["climate", "sensor"]
 
 daikin_ns = cg.esphome_ns.namespace("daikin_ducted")
-DaikinClimate = daikin_ns.class_("DaikinClimate", climate.Climate)
+DaikinClimate = daikin_ns.class_("DaikinClimate", climate.Climate, cg.Component)
 
 CONFIG_SCHEMA = climate.climate_schema(DaikinClimate).extend(
     {
@@ -52,6 +52,7 @@ SENSOR_TYPES = {
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
+    await cg.register_component(var, config)
     await climate.register_climate(var, config)
 
     for key, funcName in SENSOR_TYPES.items():

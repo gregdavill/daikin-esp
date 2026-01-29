@@ -2,16 +2,22 @@
 
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/sensor/sensor.h"
+#include "esphome/core/component.h"
 #include "homebus_rmt.h"
 
 namespace esphome
 {
    namespace daikin_ducted
    {
-      class DaikinClimate : public climate::Climate
+      class DaikinClimate : public climate::Climate, public Component
       {
       public:
          DaikinClimate();
+
+         void setup() override;
+         void loop() override;
+         void dump_config() override;
+         float get_setup_priority() const override { return setup_priority::DATA; }
 
          void control(const climate::ClimateCall &call);
          climate::ClimateTraits traits(void);
