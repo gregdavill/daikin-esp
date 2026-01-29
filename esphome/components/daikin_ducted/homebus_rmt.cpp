@@ -7,7 +7,6 @@
 #include <string.h>
 #include "esphome/core/log.h"
 #include "esp_check.h"
-#include "driver/rmt.h"
 
 #include "homebus_rmt.h"
 
@@ -37,6 +36,9 @@ namespace esphome
 #define HOMEBUS_BIT_DURATION (HOMEBUS_RMT_RESOLUTION_HZ / HOMEBUS_BIT_RATE)
 #define HOMEBUS_HALF_BIT_DURATION (HOMEBUS_BIT_DURATION / 2)
 
+// RX buffer size in symbols (enough for 32 bytes * 11 symbols/byte)
+#define RX_BUFFER_SYMBOLS (32 * 11)
+
     /*
 
     Read/Write 1 bit:
@@ -45,7 +47,6 @@ namespace esphome
               |  HALF_BIT_DURATION  | HALF_BIT_DURATION  | BIT
 
     ------────────────────────────────────────────────────------
-
 
 
 
@@ -88,7 +89,7 @@ namespace esphome
       ESP_LOGVV(TAG, str);
     }
 
-    static int homebus_rmt_decode_data(rmt_item32_t *rmt_symbols, size_t symbol_num, uint8_t *decoded_bytes, size_t max_buffer_length)
+    static int homebus_rmt_decode_data(rmt_symbol_word_t *rmt_symbols, size_t symbol_num, uint8_t *decoded_bytes, size_t max_buffer_length)
     {
       size_t byte_pos = 0;
 
@@ -110,7 +111,7 @@ namespace esphome
             return byte_pos;
           }
 
-          rmt_item32_t *symbol = &rmt_symbols[symbol_index];
+          rmt_symbol_word_t *symbol = &rmt_symbols[symbol_index];
 
           if ((symbol_index <= symbol_num))
           {
@@ -187,51 +188,35 @@ namespace esphome
     }
 
 
-    void HomebusRMT::rx_task(void *arg)
+    static bool IRAM_ATTR rmt_rx_done_callback(rmt_channel_handle_t channel,
+                                                const rmt_rx_done_event_data_t *edata,
+                                                void *user_data)
     {
+      HomebusStore *store = (HomebusStore *)user_data;
 
-      HomebusRMT *p_this = (HomebusRMT *)arg;
-      RingbufHandle_t rb = p_this->ringbuf_;
-      uint8_t buffer[48] = {0};
-
-      while (1)
-      {
-        size_t length = 0;
-        rmt_item32_t *items = (rmt_item32_t *)xRingbufferReceive(rb, &length, portMAX_DELAY);
-
-        // ESP-IDF bug, if rx_end completes on a rx_lim boundary, writing of an rx_end marker 
-        // triggers the rx_thresh interrupt and affixes the end of this packet to the start of the next.
-        // Can't be fixed in IDF as 4.4.8 isn't getting any additional bug fixes.
-        // As configured this boundary is 384 bytes. Re-starting the rmt_rx resets the buffer pointers.
-        if((length % 384) == 0){
-          esp_err_t error = rmt_rx_start(RMT_CHANNEL_2, true);
-          if (error != ESP_OK)
-          {
-            ESP_LOGE(TAG, "Restart of rmt_rx failed");
-          }
+      if (edata->num_symbols > 0) {
+        if (edata->num_symbols <= store->buffer_size) {
+          store->num_symbols = edata->num_symbols;
+          store->data_ready = true;
+        } else {
+          store->overflow = true;
         }
+      }
 
-        if (items)
-        {
-          //ESP_LOGVV(TAG, "rx: (len=%u, buffer=%p)", length, items);
-          
-          size_t decoded_size = homebus_rmt_decode_data(items, length / 4, buffer, 32);
-          
-          // after parsing the data, return spaces to ringbuffer.
-          vRingbufferReturnItem(rb, (void *)items);
+      return false;  // No high priority task woken
+    }
 
-          // Filter for potential noise/invalid packets. We need atleast the header present
-          if (decoded_size < 3)
-            continue;
+    void HomebusRMT::start_receive_()
+    {
+      rmt_receive_config_t recv_config = {};
+      recv_config.signal_range_min_ns = 1000;  // filter noise < 1us
+      recv_config.signal_range_max_ns = (HOMEBUS_BIT_DURATION * 12) * 1000000000ULL / HOMEBUS_RMT_RESOLUTION_HZ;
 
-          print_packet(buffer, decoded_size);
-
-          // pass buffer up stack
-          if (p_this->callback)
-          {
-            p_this->callback(p_this->callback_arg, buffer, decoded_size);
-          }
-        }
+      esp_err_t err = rmt_receive(this->rx_channel_, this->store_.buffer,
+                                   this->store_.buffer_size * sizeof(rmt_symbol_word_t),
+                                   &recv_config);
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "Failed to start RMT receive: %s", esp_err_to_name(err));
       }
     }
 
@@ -239,19 +224,78 @@ namespace esphome
     {
       ESP_LOGCONFIG(TAG, "Setting up Homebus...");
 
-      rmt_config_t rmt_rx = {};
-      rmt_rx.rmt_mode = RMT_MODE_RX;
-      rmt_rx.channel = RMT_CHANNEL_2;
-      rmt_rx.gpio_num = GPIO_NUM_2;
-      rmt_rx.clk_div = 20;
-      rmt_rx.mem_block_num = 2;
-      rmt_rx.flags = 0;
-      rmt_rx.rx_config.idle_threshold = HOMEBUS_BIT_DURATION * 12;
-      rmt_rx.rx_config.filter_ticks_thresh = 20;
-      rmt_rx.rx_config.filter_en = true;
+      // Allocate RX buffer
+      this->store_.buffer = (rmt_symbol_word_t *)heap_caps_calloc(RX_BUFFER_SYMBOLS, sizeof(rmt_symbol_word_t), MALLOC_CAP_8BIT);
+      if (this->store_.buffer == nullptr) {
+        ESP_LOGE(TAG, "Failed to allocate RX buffer");
+        this->error_code_ = ESP_ERR_NO_MEM;
+        return;
+      }
+      this->store_.buffer_size = RX_BUFFER_SYMBOLS;
+      this->store_.data_ready = false;
+      this->store_.overflow = false;
+      this->store_.num_symbols = 0;
 
+      // Configure RX channel
+      rmt_rx_channel_config_t rx_config = {};
+      rx_config.clk_src = RMT_CLK_SRC_DEFAULT;
+      rx_config.resolution_hz = HOMEBUS_RMT_RESOLUTION_HZ;
+      rx_config.mem_block_symbols = 64;
+      rx_config.gpio_num = GPIO_NUM_2;
+      rx_config.flags.invert_in = 0;
+      rx_config.flags.with_dma = false;
+
+      esp_err_t error = rmt_new_rx_channel(&rx_config, &this->rx_channel_);
+      if (error != ESP_OK)
+      {
+        this->error_code_ = error;
+        ESP_LOGE(TAG, "Failed to create RX channel: %s", esp_err_to_name(error));
+        return;
+      }
+
+      // Register RX done callback
+      rmt_rx_event_callbacks_t rx_cbs = {};
+      rx_cbs.on_recv_done = rmt_rx_done_callback;
+      error = rmt_rx_register_event_callbacks(this->rx_channel_, &rx_cbs, &this->store_);
+      if (error != ESP_OK)
+      {
+        this->error_code_ = error;
+        ESP_LOGE(TAG, "Failed to register RX callbacks: %s", esp_err_to_name(error));
+        return;
+      }
+
+      // Configure TX channel
+      rmt_tx_channel_config_t tx_config = {};
+      tx_config.clk_src = RMT_CLK_SRC_DEFAULT;
+      tx_config.resolution_hz = HOMEBUS_RMT_RESOLUTION_HZ;
+      tx_config.mem_block_symbols = 64;
+      tx_config.gpio_num = GPIO_NUM_3;
+      tx_config.trans_queue_depth = 1;
+      tx_config.flags.invert_out = 0;
+      tx_config.flags.io_od_mode = false;
+      tx_config.flags.io_loop_back = false;
+
+      error = rmt_new_tx_channel(&tx_config, &this->tx_channel_);
+      if (error != ESP_OK)
+      {
+        this->error_code_ = error;
+        ESP_LOGE(TAG, "Failed to create TX channel: %s", esp_err_to_name(error));
+        return;
+      }
+
+      // Create copy encoder for raw symbol transmission
+      rmt_copy_encoder_config_t encoder_config = {};
+      error = rmt_new_copy_encoder(&encoder_config, &this->tx_encoder_);
+      if (error != ESP_OK)
+      {
+        this->error_code_ = error;
+        ESP_LOGE(TAG, "Failed to create TX encoder: %s", esp_err_to_name(error));
+        return;
+      }
+
+      // Configure GPIO10 as output (enable pin for transceiver)
       gpio_config_t conf = {
-          .pin_bit_mask = 1 << 10,
+          .pin_bit_mask = 1ULL << 10,
           .mode = GPIO_MODE_OUTPUT,
           .pull_up_en = GPIO_PULLUP_DISABLE,
           .pull_down_en = GPIO_PULLDOWN_DISABLE,
@@ -260,87 +304,59 @@ namespace esphome
       gpio_config(&conf);
       gpio_set_direction(GPIO_NUM_10, GPIO_MODE_OUTPUT);
 
-      esp_err_t error = rmt_config(&rmt_rx);
+      // Enable both channels
+      error = rmt_enable(this->rx_channel_);
       if (error != ESP_OK)
       {
         this->error_code_ = error;
-        ESP_LOGE(TAG, "Create rmt_rx failed");
+        ESP_LOGE(TAG, "Failed to enable RX channel: %s", esp_err_to_name(error));
         return;
       }
 
-      error = rmt_driver_install(RMT_CHANNEL_2, 2048, 0);
+      error = rmt_enable(this->tx_channel_);
       if (error != ESP_OK)
       {
         this->error_code_ = error;
-        ESP_LOGE(TAG, "Create rmt_rx failed");
-        return;
-      }
-      error = rmt_get_ringbuf_handle(RMT_CHANNEL_2, &this->ringbuf_);
-      if (error != ESP_OK)
-      {
-        this->error_code_ = error;
-        ESP_LOGE(TAG, "Create rmt_rx failed");
+        ESP_LOGE(TAG, "Failed to enable TX channel: %s", esp_err_to_name(error));
         return;
       }
 
-      rmt_config_t rmt_tx = {};
-      rmt_tx.rmt_mode = RMT_MODE_TX;
-      rmt_tx.channel = RMT_CHANNEL_0;
-      rmt_tx.gpio_num = GPIO_NUM_3;
-      rmt_tx.mem_block_num = 1;
-      rmt_tx.clk_div = 20;
-      rmt_tx.tx_config.carrier_en = false;
-      rmt_tx.tx_config.loop_en = false;
-      rmt_tx.tx_config.idle_output_en = true;
-      rmt_tx.tx_config.idle_level = RMT_IDLE_LEVEL_HIGH;
+      // Transmit dummy byte to initialize TX line high
+      rmt_symbol_word_t tx_items[1] = {};
+      tx_items[0].duration0 = HOMEBUS_BIT_DURATION * 12;
+      tx_items[0].level0 = 1;
+      tx_items[0].duration1 = 1;
+      tx_items[0].level1 = 1;
 
-      error = rmt_config(&rmt_tx);
-      if (error != ESP_OK)
-      {
-        this->error_code_ = error;
-        ESP_LOGE(TAG, "Create rmt_rx failed");
-        return;
-      }
+      rmt_transmit_config_t tx_cfg = {};
+      tx_cfg.loop_count = 0;
+      tx_cfg.flags.eot_level = 1;  // idle high
+      rmt_transmit(this->tx_channel_, this->tx_encoder_, tx_items, sizeof(tx_items), &tx_cfg);
+      rmt_tx_wait_all_done(this->tx_channel_, portMAX_DELAY);
 
-      error = rmt_driver_install(RMT_CHANNEL_0, 0, 0);
-      if (error != ESP_OK)
-      {
-        this->error_code_ = error;
-        ESP_LOGE(TAG, "Create rmt_rx failed");
-        return;
-      }
-
-      rmt_item32_t tx_items[32] = {};
-
-      // hacky, transmit dummy byte to enable RMT HIGH output
-      tx_items[0] = {{{HOMEBUS_BIT_DURATION * 12, 1, 1, 1}}};
-      rmt_write_items(RMT_CHANNEL_0, tx_items, 1, true);
-
-
-      xTaskCreatePinnedToCore(HomebusRMT::rx_task, "rmt_rx", 2048 * 8, (void *)this, 1, NULL, 1);
-
-      uint16_t thresh;
-      rmt_get_rx_idle_thresh(RMT_CHANNEL_2, &thresh);
-      ESP_LOGCONFIG(TAG, "Idle threshold: %lu ticks", thresh);
-
-      error = rmt_rx_start(RMT_CHANNEL_2, true);
-      if (error != ESP_OK)
-      {
-        this->error_code_ = error;
-        ESP_LOGE(TAG, "Create rmt_rx failed");
-        return;
-      }
+      // Start receiving
+      this->start_receive_();
 
       gpio_set_level(GPIO_NUM_10, 0);
 
+      ESP_LOGCONFIG(TAG, "Homebus setup complete");
     }
 
     void HomebusRMT::write_bytes(const uint8_t *tx_data, uint8_t tx_data_size)
     {
-      rmt_item32_t *tx_symbols = this->rmt_tx_buffer_;
+      rmt_symbol_word_t *tx_symbols = this->rmt_tx_buffer_;
 
-      const rmt_item32_t homebus_bit0_symbol = {{{HOMEBUS_HALF_BIT_DURATION, 0, HOMEBUS_HALF_BIT_DURATION, 1}}};
-      const rmt_item32_t homebus_bit1_symbol = {{{HOMEBUS_HALF_BIT_DURATION, 1, HOMEBUS_HALF_BIT_DURATION, 1}}};
+      rmt_symbol_word_t homebus_bit0_symbol = {};
+      homebus_bit0_symbol.duration0 = HOMEBUS_HALF_BIT_DURATION;
+      homebus_bit0_symbol.level0 = 0;
+      homebus_bit0_symbol.duration1 = HOMEBUS_HALF_BIT_DURATION;
+      homebus_bit0_symbol.level1 = 1;
+
+      rmt_symbol_word_t homebus_bit1_symbol = {};
+      homebus_bit1_symbol.duration0 = HOMEBUS_HALF_BIT_DURATION;
+      homebus_bit1_symbol.level0 = 1;
+      homebus_bit1_symbol.duration1 = HOMEBUS_HALF_BIT_DURATION;
+      homebus_bit1_symbol.level1 = 1;
 
       // encode data
       for (int byte_index = 0; byte_index < tx_data_size; byte_index++)
@@ -371,8 +387,23 @@ namespace esphome
 
       delay(10);
 
-      esp_err_t err = rmt_write_items(RMT_CHANNEL_0, this->rmt_tx_buffer_, tx_data_size * 11, false);
-      // ESP_RETURN_ON_ERROR(err, TAG, "write_bytes failed");
+      rmt_transmit_config_t tx_cfg = {};
+      tx_cfg.loop_count = 0;
+      tx_cfg.flags.eot_level = 1;  // idle high
+
+      esp_err_t err = rmt_transmit(this->tx_channel_, this->tx_encoder_,
+                                    this->rmt_tx_buffer_,
+                                    tx_data_size * 11 * sizeof(rmt_symbol_word_t),
+                                    &tx_cfg);
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "TX transmit failed: %s", esp_err_to_name(err));
+        return;
+      }
+
+      err = rmt_tx_wait_all_done(this->tx_channel_, portMAX_DELAY);
+      if (err != ESP_OK) {
+        ESP_LOGE(TAG, "TX wait failed: %s", esp_err_to_name(err));
+      }
     }
 
     void HomebusRMT::dump_config()
@@ -382,7 +413,40 @@ namespace esphome
 
     void HomebusRMT::loop()
     {
+      if (this->store_.overflow) {
+        ESP_LOGW(TAG, "RX buffer overflow");
+        this->store_.overflow = false;
+        this->start_receive_();
+        return;
+      }
 
+      if (!this->store_.data_ready) {
+        return;
+      }
+
+      // Process received data
+      uint8_t buffer[48] = {0};
+      size_t num_symbols = this->store_.num_symbols;
+
+      this->store_.data_ready = false;
+      this->store_.num_symbols = 0;
+
+      size_t decoded_size = homebus_rmt_decode_data(this->store_.buffer, num_symbols, buffer, 32);
+
+      // Restart receiving for next packet
+      this->start_receive_();
+
+      // Filter for potential noise/invalid packets. We need at least the header present
+      if (decoded_size < 3)
+        return;
+
+      print_packet(buffer, decoded_size);
+
+      // Pass buffer up stack
+      if (this->callback)
+      {
+        this->callback(this->callback_arg, buffer, decoded_size);
+      }
     }
 
   } // namespace daikin_ducted
