@@ -5,12 +5,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <string.h>
-#include "esphome/core/log.h"
 #include "esp_check.h"
 
 #include "homebus_rmt.h"
 
-#include "esphome/core/defines.h"
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
 #include "esphome/core/log.h"
@@ -22,22 +20,16 @@ namespace esphome
 
     static const char *TAG = "homebus";
 
-/**
- * @brief RMT resolution for homebus, in Hz
- *
- */
-#define HOMEBUS_RMT_RESOLUTION_HZ 4000000UL
+    // RMT resolution for homebus, in Hz
+    static constexpr uint32_t HOMEBUS_RMT_RESOLUTION_HZ = 4000000UL;
 
-/**
- * @brief homebus timing parameters, in us (1/HOMEBUS_RMT_RESOLUTION_HZ)
- *
- */
-#define HOMEBUS_BIT_RATE 9600
-#define HOMEBUS_BIT_DURATION (HOMEBUS_RMT_RESOLUTION_HZ / HOMEBUS_BIT_RATE)
-#define HOMEBUS_HALF_BIT_DURATION (HOMEBUS_BIT_DURATION / 2)
+    // Homebus timing parameters (in RMT ticks at HOMEBUS_RMT_RESOLUTION_HZ)
+    static constexpr uint32_t HOMEBUS_BIT_RATE = 9600;
+    static constexpr uint32_t HOMEBUS_BIT_DURATION = HOMEBUS_RMT_RESOLUTION_HZ / HOMEBUS_BIT_RATE;
+    static constexpr uint32_t HOMEBUS_HALF_BIT_DURATION = HOMEBUS_BIT_DURATION / 2;
 
-// RX buffer size in symbols (enough for 32 bytes * 11 symbols/byte)
-#define RX_BUFFER_SYMBOLS (32 * 11)
+    // RX buffer size in symbols (enough for 32 bytes * 11 symbols/byte)
+    static constexpr size_t RX_BUFFER_SYMBOLS = 32 * 11;
 
     /*
 
@@ -64,29 +56,31 @@ namespace esphome
 
     */
 
-    int countSetBits(unsigned int n)
+    static inline int countSetBits(unsigned int n)
     {
-      n = n - ((n >> 1) & 0x55555555);
-      n = (n & 0x33333333) + ((n >> 2) & 0x33333333);
-      n = (n + (n >> 4)) & 0x0F0F0F0F;
-      n = n + (n >> 8);
-      n = n + (n >> 16);
-      return n & 0x0000003F;
+      return __builtin_popcount(n);
     }
 
-
-    void print_packet(const uint8_t *buffer, const uint32_t buffer_length)
+    static void print_packet(const uint8_t *buffer, const uint32_t buffer_length)
     {
-      char str[256];
+      // Each byte needs 3 chars ("xx "), plus prefix (~15) and suffix
+      static constexpr size_t MAX_PRINT_BYTES = 48;
+      char str[16 + MAX_PRINT_BYTES * 3 + 2];
       char *p = str;
+
+      size_t print_len = (buffer_length > MAX_PRINT_BYTES) ? MAX_PRINT_BYTES : buffer_length;
       p += sprintf(str, "len=%02lu pkt=[", buffer_length);
-      for (int i = 0; i < buffer_length; i++)
+      for (size_t i = 0; i < print_len; i++)
       {
         p += sprintf(p, "%02x ", buffer[i]);
       }
-      *(p - 1) = ']';
+      if (print_len > 0) {
+        *(p - 1) = ']';
+      } else {
+        *p++ = ']';
+      }
       *p = 0;
-      ESP_LOGVV(TAG, str);
+      ESP_LOGVV(TAG, "%s", str);
     }
 
     static int homebus_rmt_decode_data(rmt_symbol_word_t *rmt_symbols, size_t symbol_num, uint8_t *decoded_bytes, size_t max_buffer_length)
@@ -206,6 +200,24 @@ namespace esphome
       return false;  // No high priority task woken
     }
 
+    HomebusRMT::~HomebusRMT()
+    {
+      if (this->tx_encoder_ != nullptr) {
+        rmt_del_encoder(this->tx_encoder_);
+      }
+      if (this->tx_channel_ != nullptr) {
+        rmt_disable(this->tx_channel_);
+        rmt_del_channel(this->tx_channel_);
+      }
+      if (this->rx_channel_ != nullptr) {
+        rmt_disable(this->rx_channel_);
+        rmt_del_channel(this->rx_channel_);
+      }
+      if (this->store_.buffer != nullptr) {
+        free(this->store_.buffer);
+      }
+    }
+
     void HomebusRMT::start_receive_()
     {
       rmt_receive_config_t recv_config = {};
@@ -228,7 +240,7 @@ namespace esphome
       this->store_.buffer = (rmt_symbol_word_t *)heap_caps_calloc(RX_BUFFER_SYMBOLS, sizeof(rmt_symbol_word_t), MALLOC_CAP_8BIT);
       if (this->store_.buffer == nullptr) {
         ESP_LOGE(TAG, "Failed to allocate RX buffer");
-        this->error_code_ = ESP_ERR_NO_MEM;
+        this->mark_failed();
         return;
       }
       this->store_.buffer_size = RX_BUFFER_SYMBOLS;
@@ -248,8 +260,8 @@ namespace esphome
       esp_err_t error = rmt_new_rx_channel(&rx_config, &this->rx_channel_);
       if (error != ESP_OK)
       {
-        this->error_code_ = error;
         ESP_LOGE(TAG, "Failed to create RX channel: %s", esp_err_to_name(error));
+        this->mark_failed();
         return;
       }
 
@@ -259,8 +271,8 @@ namespace esphome
       error = rmt_rx_register_event_callbacks(this->rx_channel_, &rx_cbs, &this->store_);
       if (error != ESP_OK)
       {
-        this->error_code_ = error;
         ESP_LOGE(TAG, "Failed to register RX callbacks: %s", esp_err_to_name(error));
+        this->mark_failed();
         return;
       }
 
@@ -278,8 +290,8 @@ namespace esphome
       error = rmt_new_tx_channel(&tx_config, &this->tx_channel_);
       if (error != ESP_OK)
       {
-        this->error_code_ = error;
         ESP_LOGE(TAG, "Failed to create TX channel: %s", esp_err_to_name(error));
+        this->mark_failed();
         return;
       }
 
@@ -288,8 +300,8 @@ namespace esphome
       error = rmt_new_copy_encoder(&encoder_config, &this->tx_encoder_);
       if (error != ESP_OK)
       {
-        this->error_code_ = error;
         ESP_LOGE(TAG, "Failed to create TX encoder: %s", esp_err_to_name(error));
+        this->mark_failed();
         return;
       }
 
@@ -308,16 +320,16 @@ namespace esphome
       error = rmt_enable(this->rx_channel_);
       if (error != ESP_OK)
       {
-        this->error_code_ = error;
         ESP_LOGE(TAG, "Failed to enable RX channel: %s", esp_err_to_name(error));
+        this->mark_failed();
         return;
       }
 
       error = rmt_enable(this->tx_channel_);
       if (error != ESP_OK)
       {
-        this->error_code_ = error;
         ESP_LOGE(TAG, "Failed to enable TX channel: %s", esp_err_to_name(error));
+        this->mark_failed();
         return;
       }
 
@@ -344,6 +356,9 @@ namespace esphome
 
     void HomebusRMT::write_bytes(const uint8_t *tx_data, uint8_t tx_data_size)
     {
+      if (this->is_failed())
+        return;
+
       rmt_symbol_word_t *tx_symbols = this->rmt_tx_buffer_;
 
       rmt_symbol_word_t homebus_bit0_symbol = {};
@@ -413,6 +428,9 @@ namespace esphome
 
     void HomebusRMT::loop()
     {
+      if (this->is_failed())
+        return;
+
       if (this->store_.overflow) {
         ESP_LOGW(TAG, "RX buffer overflow");
         this->store_.overflow = false;
@@ -443,9 +461,9 @@ namespace esphome
       print_packet(buffer, decoded_size);
 
       // Pass buffer up stack
-      if (this->callback)
+      if (this->callback_)
       {
-        this->callback(this->callback_arg, buffer, decoded_size);
+        this->callback_(this->callback_arg_, buffer, decoded_size);
       }
     }
 
