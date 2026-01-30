@@ -41,6 +41,10 @@ namespace esphome
             void dump_config() override;
             void loop() override;
 
+            void set_rx_pin(uint8_t pin) { this->rx_pin_ = pin; }
+            void set_tx_pin(uint8_t pin) { this->tx_pin_ = pin; }
+            void set_enable_pin(uint8_t pin) { this->enable_pin_ = pin; }
+
             void write_bytes(const uint8_t *tx_data, uint8_t tx_data_size);
             void register_callback(void (*callback)(void *arg, const uint8_t[], const uint32_t), void *arg)
             {
@@ -50,6 +54,10 @@ namespace esphome
 
         protected:
             void start_receive_();
+
+            uint8_t rx_pin_{2};
+            uint8_t tx_pin_{3};
+            uint8_t enable_pin_{10};
 
             rmt_channel_handle_t rx_channel_{nullptr};
             rmt_channel_handle_t tx_channel_{nullptr};

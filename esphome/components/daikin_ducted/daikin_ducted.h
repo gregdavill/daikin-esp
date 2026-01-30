@@ -29,6 +29,10 @@ namespace esphome
          void set_fan(fan::Fan *f) { this->fan_ = f; }
          void set_auxiliary_climate(climate::Climate *aux) { this->aux_climate_ = aux; }
 
+         void set_rx_pin(uint8_t pin) { this->homebus_.set_rx_pin(pin); }
+         void set_tx_pin(uint8_t pin) { this->homebus_.set_tx_pin(pin); }
+         void set_enable_pin(uint8_t pin) { this->homebus_.set_enable_pin(pin); }
+
       protected:
          static void callback(void *arg, const uint8_t buffer[], const uint32_t buffer_length);
 

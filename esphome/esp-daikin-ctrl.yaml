@@ -43,6 +43,11 @@ climate:
     id: daikin0
     name: "Ducted AC"
 
+    # P1P2/Homebus interface
+    rx_pin: 2        # RX from MAX22088
+    tx_pin: 3        # TX to MAX22088
+    enable_pin: 10   # TX enable
+
     homekit_climate:
       name: "Ducted AC HomeKit"
 

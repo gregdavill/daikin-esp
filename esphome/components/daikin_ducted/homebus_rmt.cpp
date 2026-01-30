@@ -273,7 +273,7 @@ namespace esphome
       rx_config.clk_src = RMT_CLK_SRC_DEFAULT;
       rx_config.resolution_hz = HOMEBUS_RMT_RESOLUTION_HZ;
       rx_config.mem_block_symbols = 64;
-      rx_config.gpio_num = GPIO_NUM_2;
+      rx_config.gpio_num = static_cast<gpio_num_t>(this->rx_pin_);
       rx_config.flags.invert_in = 0;
       rx_config.flags.with_dma = false;
 
@@ -304,7 +304,7 @@ namespace esphome
       tx_config.clk_src = RMT_CLK_SRC_DEFAULT;
       tx_config.resolution_hz = HOMEBUS_RMT_RESOLUTION_HZ;
       tx_config.mem_block_symbols = 64;
-      tx_config.gpio_num = GPIO_NUM_3;
+      tx_config.gpio_num = static_cast<gpio_num_t>(this->tx_pin_);
       tx_config.trans_queue_depth = 1;
       tx_config.flags.invert_out = 0;
       tx_config.flags.io_od_mode = false;
@@ -328,16 +328,17 @@ namespace esphome
         return;
       }
 
-      // Configure GPIO10 as output (enable pin for transceiver)
+      // Configure enable pin as output (enable pin for transceiver)
+      gpio_num_t enable_gpio = static_cast<gpio_num_t>(this->enable_pin_);
       gpio_config_t conf = {
-          .pin_bit_mask = 1ULL << 10,
+          .pin_bit_mask = 1ULL << this->enable_pin_,
           .mode = GPIO_MODE_OUTPUT,
           .pull_up_en = GPIO_PULLUP_DISABLE,
           .pull_down_en = GPIO_PULLDOWN_DISABLE,
           .intr_type = GPIO_INTR_DISABLE};
 
       gpio_config(&conf);
-      gpio_set_direction(GPIO_NUM_10, GPIO_MODE_OUTPUT);
+      gpio_set_direction(enable_gpio, GPIO_MODE_OUTPUT);
 
       // Enable both channels
       error = rmt_enable(this->rx_channel_);
@@ -372,7 +373,7 @@ namespace esphome
       // Start receiving
       this->start_receive_();
 
-      gpio_set_level(GPIO_NUM_10, 0);
+      gpio_set_level(enable_gpio, 0);
 
       ESP_LOGCONFIG(TAG, "Homebus setup complete");
     }
@@ -447,6 +448,9 @@ namespace esphome
     void HomebusRMT::dump_config()
     {
       ESP_LOGCONFIG(TAG, "Homebus:");
+      ESP_LOGCONFIG(TAG, "  RX Pin: GPIO%d", this->rx_pin_);
+      ESP_LOGCONFIG(TAG, "  TX Pin: GPIO%d", this->tx_pin_);
+      ESP_LOGCONFIG(TAG, "  Enable Pin: GPIO%d", this->enable_pin_);
     }
 
     void HomebusRMT::loop()

@@ -1,5 +1,6 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
+from esphome import pins
 from esphome.components import binary_sensor, climate, fan, sensor
 from esphome.const import (
     CONF_ID,
@@ -13,6 +14,9 @@ from esphome.const import (
 CONF_HOMEKIT_CLIMATE = "homekit_climate"
 CONF_HOMEKIT_FAN = "homekit_fan"
 CONF_FILTER_CLEAN = "filter_clean"
+CONF_RX_PIN = "rx_pin"
+CONF_TX_PIN = "tx_pin"
+CONF_ENABLE_PIN = "enable_pin"
 
 AUTO_LOAD = ["binary_sensor", "climate", "fan", "sensor"]
 
@@ -23,6 +27,9 @@ DaikinFan = daikin_ns.class_("DaikinFan", fan.Fan, cg.Component)
 
 CONFIG_SCHEMA = climate.climate_schema(DaikinClimate).extend(
     {
+        cv.Optional(CONF_RX_PIN, default=2): pins.internal_gpio_input_pin_number,
+        cv.Optional(CONF_TX_PIN, default=3): pins.internal_gpio_output_pin_number,
+        cv.Optional(CONF_ENABLE_PIN, default=10): pins.internal_gpio_output_pin_number,
         cv.Optional("outdoor_intake_temperature"): sensor.sensor_schema(
             unit_of_measurement=UNIT_CELSIUS,
             icon=ICON_THERMOMETER,
@@ -62,6 +69,10 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await climate.register_climate(var, config)
+
+    cg.add(var.set_rx_pin(config[CONF_RX_PIN]))
+    cg.add(var.set_tx_pin(config[CONF_TX_PIN]))
+    cg.add(var.set_enable_pin(config[CONF_ENABLE_PIN]))
 
     for key, funcName in SENSOR_TYPES.items():
         if key in config:
