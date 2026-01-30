@@ -61,3 +61,6 @@ climate:
       name: "Indoor Temperature"
       filters:
         - throttle_average: 60s
+      
+    filter_clean:
+      name: "Filter Status"

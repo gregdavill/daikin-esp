@@ -1,18 +1,20 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import climate, fan, sensor
+from esphome.components import binary_sensor, climate, fan, sensor
 from esphome.const import (
     CONF_ID,
     UNIT_CELSIUS,
     ICON_THERMOMETER,
     DEVICE_CLASS_TEMPERATURE,
+    DEVICE_CLASS_PROBLEM,
     STATE_CLASS_MEASUREMENT,
 )
 
 CONF_HOMEKIT_CLIMATE = "homekit_climate"
 CONF_HOMEKIT_FAN = "homekit_fan"
+CONF_FILTER_CLEAN = "filter_clean"
 
-AUTO_LOAD = ["climate", "fan", "sensor"]
+AUTO_LOAD = ["binary_sensor", "climate", "fan", "sensor"]
 
 daikin_ns = cg.esphome_ns.namespace("daikin_ducted")
 DaikinClimate = daikin_ns.class_("DaikinClimate", climate.Climate, cg.Component)
@@ -44,6 +46,9 @@ CONFIG_SCHEMA = climate.climate_schema(DaikinClimate).extend(
         ),
         cv.Optional(CONF_HOMEKIT_CLIMATE): climate.climate_schema(DaikinClimateHomeKit),
         cv.Optional(CONF_HOMEKIT_FAN): fan.fan_schema(DaikinFan),
+        cv.Optional(CONF_FILTER_CLEAN): binary_sensor.binary_sensor_schema(
+            device_class=DEVICE_CLASS_PROBLEM,
+        ),
     }
 )
 
@@ -62,6 +67,10 @@ async def to_code(config):
         if key in config:
             sens = await sensor.new_sensor(config[key])
             cg.add(getattr(var, funcName)(sens))
+
+    if CONF_FILTER_CLEAN in config:
+        sens = await binary_sensor.new_binary_sensor(config[CONF_FILTER_CLEAN])
+        cg.add(var.set_filter_clean_binary_sensor(sens))
 
     if CONF_HOMEKIT_CLIMATE in config:
         hk_config = config[CONF_HOMEKIT_CLIMATE]

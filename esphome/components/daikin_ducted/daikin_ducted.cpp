@@ -462,6 +462,14 @@ namespace esphome
         case PacketType::COUNTER_ALARM:
         {
           ESP_LOGI(TAG, "Counter/alarm request");
+
+          // (payload[6]) contains filter status: 0x02
+          bool filter_needs_clean = (payload[6] == 0x02);
+          if (self->filter_clean_binary_sensor_ != nullptr)
+          {
+            self->filter_clean_binary_sensor_->publish_state(filter_needs_clean);
+          }
+
           const uint8_t data[] = {0x00, 0x00, 0x00, 0x00, 0x00};
           self->send_simple_response(PacketType::COUNTER_ALARM, data, sizeof(data));
           break;

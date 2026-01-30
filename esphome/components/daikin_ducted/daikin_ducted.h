@@ -2,6 +2,7 @@
 
 #include <cstddef>
 
+#include "esphome/components/binary_sensor/binary_sensor.h"
 #include "esphome/components/climate/climate.h"
 #include "esphome/components/fan/fan.h"
 #include "esphome/components/sensor/sensor.h"
@@ -51,6 +52,8 @@ namespace esphome
          SUB_SENSOR(indoor_temperature);
          SUB_SENSOR(outdoor_intake_temperature);
          SUB_SENSOR(coolant_temperature);
+
+         SUB_BINARY_SENSOR(filter_clean);
       };
 
       // HomeKit-compatible climate wrapper (only OFF/HEAT/COOL/AUTO modes)
