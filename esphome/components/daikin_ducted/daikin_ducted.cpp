@@ -192,6 +192,7 @@ namespace esphome
         if (fabs(this->last_temp_state - this->current_temperature) > TEMP_PUBLISH_THRESHOLD)
         {
           this->publish_state();
+          this->sync_auxiliary_climate();
           this->last_temp_state = this->current_temperature;
         }
 
