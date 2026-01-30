@@ -177,6 +177,17 @@ namespace esphome
     }
 
 
+    // ISR-safe function to restart reception on the current write buffer
+    static void IRAM_ATTR start_receive_isr(HomebusStore *store)
+    {
+      rmt_receive_config_t recv_config = {};
+      recv_config.signal_range_min_ns = 1000;
+      recv_config.signal_range_max_ns = (HOMEBUS_BIT_DURATION * 12) * 1000000000ULL / HOMEBUS_RMT_RESOLUTION_HZ;
+
+      rmt_receive(store->rx_channel, store->buffers[store->write_idx],
+                  store->buffer_size * sizeof(rmt_symbol_word_t), &recv_config);
+    }
+
     static bool IRAM_ATTR rmt_rx_done_callback(rmt_channel_handle_t channel,
                                                 const rmt_rx_done_event_data_t *edata,
                                                 void *user_data)
@@ -185,12 +196,18 @@ namespace esphome
 
       if (edata->num_symbols > 0) {
         if (edata->num_symbols <= store->buffer_size) {
+          // Mark current write buffer as ready for reading
+          store->read_idx = store->write_idx;
           store->num_symbols = edata->num_symbols;
-          store->data_ready = true;
+          // Swap to other buffer for next receive
+          store->write_idx ^= 1;
         } else {
           store->overflow = true;
         }
       }
+
+      // Immediately restart reception on the next buffer (ISR-safe in ESP-IDF 5.x)
+      start_receive_isr(store);
 
       return false;  // No high priority task woken
     }
@@ -208,8 +225,10 @@ namespace esphome
         rmt_disable(this->rx_channel_);
         rmt_del_channel(this->rx_channel_);
       }
-      if (this->store_.buffer != nullptr) {
-        free(this->store_.buffer);
+      for (int i = 0; i < 2; i++) {
+        if (this->store_.buffers[i] != nullptr) {
+          heap_caps_free(this->store_.buffers[i]);
+        }
       }
     }
 
@@ -219,7 +238,9 @@ namespace esphome
       recv_config.signal_range_min_ns = 1000;  // filter noise < 1us
       recv_config.signal_range_max_ns = (HOMEBUS_BIT_DURATION * 12) * 1000000000ULL / HOMEBUS_RMT_RESOLUTION_HZ;
 
-      esp_err_t err = rmt_receive(this->rx_channel_, this->store_.buffer,
+      // Use current write buffer for reception
+      esp_err_t err = rmt_receive(this->rx_channel_,
+                                   this->store_.buffers[this->store_.write_idx],
                                    this->store_.buffer_size * sizeof(rmt_symbol_word_t),
                                    &recv_config);
       if (err != ESP_OK) {
@@ -231,15 +252,19 @@ namespace esphome
     {
       ESP_LOGCONFIG(TAG, "Setting up Homebus...");
 
-      // Allocate RX buffer
-      this->store_.buffer = (rmt_symbol_word_t *)heap_caps_calloc(RX_BUFFER_SYMBOLS, sizeof(rmt_symbol_word_t), MALLOC_CAP_8BIT);
-      if (this->store_.buffer == nullptr) {
-        ESP_LOGE(TAG, "Failed to allocate RX buffer");
-        this->mark_failed();
-        return;
+      // Allocate RX buffers
+      for (int i = 0; i < 2; i++) {
+        this->store_.buffers[i] = (rmt_symbol_word_t *)heap_caps_calloc(
+            RX_BUFFER_SYMBOLS, sizeof(rmt_symbol_word_t), MALLOC_CAP_8BIT);
+        if (this->store_.buffers[i] == nullptr) {
+          ESP_LOGE(TAG, "Failed to allocate RX buffer %d", i);
+          this->mark_failed();
+          return;
+        }
       }
       this->store_.buffer_size = RX_BUFFER_SYMBOLS;
-      this->store_.data_ready = false;
+      this->store_.write_idx = 0;
+      this->store_.read_idx = 0xFF;  // No data ready
       this->store_.overflow = false;
       this->store_.num_symbols = 0;
 
@@ -259,6 +284,9 @@ namespace esphome
         this->mark_failed();
         return;
       }
+
+      // Store channel handle in store for ISR access
+      this->store_.rx_channel = this->rx_channel_;
 
       // Register RX done callback
       rmt_rx_event_callbacks_t rx_cbs = {};
@@ -429,25 +457,24 @@ namespace esphome
       if (this->store_.overflow) {
         ESP_LOGW(TAG, "RX buffer overflow");
         this->store_.overflow = false;
-        this->start_receive_();
         return;
       }
 
-      if (!this->store_.data_ready) {
+      // Check if a buffer is ready for processing
+      uint8_t ready_idx = this->store_.read_idx;
+      if (ready_idx == 0xFF) {
         return;
       }
 
-      // Process received data
-      uint8_t buffer[48] = {0};
+      // Capture state and mark as processed
+      // Note: Reception already restarted in ISR callback on the other buffer
       size_t num_symbols = this->store_.num_symbols;
-
-      this->store_.data_ready = false;
+      this->store_.read_idx = 0xFF;
       this->store_.num_symbols = 0;
 
-      size_t decoded_size = homebus_rmt_decode_data(this->store_.buffer, num_symbols, buffer, 32);
-
-      // Restart receiving for next packet
-      this->start_receive_();
+      // Process received data from the completed buffer
+      uint8_t buffer[48] = {0};
+      size_t decoded_size = homebus_rmt_decode_data(this->store_.buffers[ready_idx], num_symbols, buffer, 32);
 
       // Filter for potential noise/invalid packets. We need at least the header present
       if (decoded_size < 3)

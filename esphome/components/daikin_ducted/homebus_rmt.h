@@ -22,10 +22,12 @@ namespace esphome
     {
 
         struct HomebusStore {
-            rmt_symbol_word_t *buffer;
+            rmt_symbol_word_t *buffers[2];   // Double buffer for pingpong operation
+            rmt_channel_handle_t rx_channel; // RX channel handle for ISR restart
             uint32_t buffer_size;
+            volatile uint8_t write_idx;      // Buffer currently receiving data
+            volatile uint8_t read_idx;       // Buffer ready for processing (0xFF if none)
             volatile uint32_t num_symbols;
-            volatile bool data_ready;
             volatile bool overflow;
         };
 
