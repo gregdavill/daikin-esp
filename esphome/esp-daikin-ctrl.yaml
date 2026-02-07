@@ -69,3 +69,12 @@ climate:
       
     filter_clean:
       name: "Filter Status"
+
+text_sensor:
+  - platform: git_ref
+    name: "Git Ref"
+    long: true
+    all: true
+    always: true
+    abbrev: 8
+    dirty: "-dirty"
