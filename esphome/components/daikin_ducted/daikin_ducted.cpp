@@ -561,7 +561,7 @@ namespace esphome
     climate::ClimateTraits DaikinClimate::traits()
     {
       auto traits = climate::ClimateTraits();
-      traits.set_supports_current_temperature(true);
+      traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
       traits.set_supported_modes({
           climate::CLIMATE_MODE_OFF,
           climate::CLIMATE_MODE_COOL,
@@ -575,7 +575,7 @@ namespace esphome
           climate::CLIMATE_FAN_MEDIUM,
           climate::CLIMATE_FAN_HIGH,
       });
-      traits.set_supports_action(true);
+      traits.add_feature_flags(climate::CLIMATE_SUPPORTS_ACTION);
       traits.set_visual_min_temperature(MIN_TEMPERATURE);
       traits.set_visual_max_temperature(MAX_TEMPERATURE);
       traits.set_visual_target_temperature_step(TEMPERATURE_STEP);
@@ -613,7 +613,7 @@ namespace esphome
     climate::ClimateTraits DaikinClimateHomeKit::traits()
     {
       auto traits = climate::ClimateTraits();
-      traits.set_supports_current_temperature(true);
+      traits.add_feature_flags(climate::CLIMATE_SUPPORTS_CURRENT_TEMPERATURE);
       // HomeKit-compatible modes only (no FAN_ONLY or DRY)
       traits.set_supported_modes({
           climate::CLIMATE_MODE_OFF,
@@ -626,7 +626,7 @@ namespace esphome
           climate::CLIMATE_FAN_MEDIUM,
           climate::CLIMATE_FAN_HIGH,
       });
-      traits.set_supports_action(true);
+      traits.add_feature_flags(climate::CLIMATE_SUPPORTS_ACTION);
       traits.set_visual_min_temperature(MIN_TEMPERATURE);
       traits.set_visual_max_temperature(MAX_TEMPERATURE);
       traits.set_visual_target_temperature_step(TEMPERATURE_STEP);
