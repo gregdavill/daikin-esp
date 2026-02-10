@@ -234,9 +234,15 @@ namespace esphome
       // Handle mode changes
       if (this->mode_updated)
       {
-        response.power_status = (this->mode != climate::CLIMATE_MODE_OFF) ? PowerState::ON : PowerState::OFF;
-        response.operating_mode = climate_mode_to_p1p2(this->mode);
-        response.reserved_6 = FanSpeed::CHANGED_FLAG; // Signal mode change
+        if(this->mode == climate::CLIMATE_MODE_OFF){
+          response.power_status = PowerState::OFF;
+        }
+        else 
+        {
+          response.power_status = PowerState::ON;
+          response.operating_mode = climate_mode_to_p1p2(this->mode);
+          response.reserved_6 = FanSpeed::CHANGED_FLAG; // Signal mode change
+        }
         this->mode_updated = false;
         state_changed = true;
       }
