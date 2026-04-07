@@ -1,7 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome import pins
-from esphome.components import binary_sensor, climate, fan, sensor
+from esphome.components import binary_sensor, climate, esp32, fan, sensor
 from esphome.const import (
     CONF_ID,
     UNIT_CELSIUS,
@@ -66,6 +66,8 @@ SENSOR_TYPES = {
 }
 
 async def to_code(config):
+    esp32.include_builtin_idf_component("esp_driver_rmt")
+
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     await climate.register_climate(var, config)
