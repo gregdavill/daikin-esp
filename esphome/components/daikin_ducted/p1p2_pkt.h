@@ -38,6 +38,7 @@ namespace PacketType
   constexpr uint8_t OPERATION_CONTROL = 0x38;
   constexpr uint8_t COUNTER_ALARM = 0x39;
   constexpr uint8_t UNKNOWN_3A = 0x3A;
+  constexpr uint8_t UNKNOWN_31 = 0x31;
 }
 
 // Operating modes

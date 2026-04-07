@@ -481,6 +481,14 @@ namespace esphome
           break;
         }
 
+        // Packet is static but needs acknowledgement
+        case PacketType::UNKNOWN_31:
+        {
+          ESP_LOGI(TAG, "Unknown packet 0x31");
+          self->send_simple_response(PacketType::UNKNOWN_31);
+          break;
+        }
+
         case PacketType::UNKNOWN_32:
         {
           ESP_LOGI(TAG, "Unknown packet 0x32");
