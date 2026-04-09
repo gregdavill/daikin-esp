@@ -506,14 +506,20 @@ namespace esphome
         }
 
         case PacketType::OUTDOOR_UNIT_NAME:
-          ESP_LOGI(TAG, "Outdoor unit name: %s", reinterpret_cast<const char *>(payload));
+        {
+          int name_len = buffer_length - 4; // 3 header bytes + 1 CRC byte
+          ESP_LOGI(TAG, "Outdoor unit name: %.*s", name_len, reinterpret_cast<const char *>(payload));
           self->send_simple_response(PacketType::OUTDOOR_UNIT_NAME);
           break;
+        }
 
         case PacketType::INDOOR_UNIT_NAME:
-          ESP_LOGI(TAG, "Indoor unit name: %s", reinterpret_cast<const char *>(payload));
+        {
+          int name_len = buffer_length - 4; // 3 header bytes + 1 CRC byte
+          ESP_LOGI(TAG, "Indoor unit name: %.*s", name_len, reinterpret_cast<const char *>(payload));
           self->send_simple_response(PacketType::INDOOR_UNIT_NAME);
           break;
+        }
 
         default:
           ESP_LOGVV(TAG, "Unhandled packet: dir=0x%02X addr=0x%02X type=0x%02X len=%lu",
