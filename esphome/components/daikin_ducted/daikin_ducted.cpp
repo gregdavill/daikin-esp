@@ -487,8 +487,7 @@ namespace esphome
         {
           ESP_LOGI(TAG, "Counter/alarm request");
 
-          // (payload[6]) contains filter status: 0x02
-          bool filter_needs_clean = (payload[6] == 0x02);
+          bool filter_needs_clean = (payload[CounterAlarm::FILTER_STATUS] == CounterAlarm::FILTER_NEEDS_CLEAN);
           if (self->filter_clean_binary_sensor_ != nullptr)
           {
             self->filter_clean_binary_sensor_->publish_state(filter_needs_clean);
