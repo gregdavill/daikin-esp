@@ -309,9 +309,12 @@ namespace esphome
       }
       else
       {
-        // Read fan speed from device
-        auto new_fan_mode = p1p2_to_climate_fan(payload[ControlRequest::COOLING_FAN_SPEED]);
-        int new_fan_speed = p1p2_fan_to_speed_level(payload[ControlRequest::COOLING_FAN_SPEED]);
+        // Read fan speed from the register matching the current mode
+        uint8_t fan_reg = (this->mode == climate::CLIMATE_MODE_HEAT)
+            ? payload[ControlRequest::HEATING_FAN_SPEED]
+            : payload[ControlRequest::COOLING_FAN_SPEED];
+        auto new_fan_mode = p1p2_to_climate_fan(fan_reg);
+        int new_fan_speed = p1p2_fan_to_speed_level(fan_reg);
 
         if (new_fan_mode != this->fan_mode)
         {
