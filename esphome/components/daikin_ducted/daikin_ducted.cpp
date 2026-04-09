@@ -242,7 +242,7 @@ namespace esphome
         {
           response.power_status = PowerState::ON;
           response.operating_mode = climate_mode_to_p1p2(this->mode);
-          response.reserved_6 = FanSpeed::CHANGED_FLAG; // Signal mode change
+          response.reserved_6 = AUX_CHANGED_FLAG;
         }
         this->mode_updated = false;
         state_changed = true;
@@ -299,7 +299,7 @@ namespace esphome
       if (this->fan_updated)
       {
         uint8_t fan_speed = climate_fan_to_p1p2(this->fan_mode.value_or(climate::CLIMATE_FAN_MEDIUM));
-        uint8_t speed_with_flag = fan_speed | FanSpeed::CHANGED_FLAG;
+        uint8_t speed_with_flag = fan_speed | AUX_CHANGED_FLAG;
 
         response.cooling_fan_speed = (payload[ControlRequest::COOLING_FAN_SPEED] & ~FanSpeed::MASK) | speed_with_flag;
         response.heating_fan_speed = (payload[ControlRequest::HEATING_FAN_SPEED] & ~FanSpeed::MASK) | speed_with_flag;

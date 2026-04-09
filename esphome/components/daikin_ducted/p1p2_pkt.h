@@ -66,8 +66,10 @@ namespace FanSpeed
   constexpr uint8_t MEDIUM = 0x30;
   constexpr uint8_t HIGH = 0x50;
   constexpr uint8_t MASK = 0x70;
-  constexpr uint8_t CHANGED_FLAG = 0x80;
 }
+
+// Bit 7 flag indicating a value has been changed by the auxiliary controller
+constexpr uint8_t AUX_CHANGED_FLAG = 0x80;
 
 // Power state
 namespace PowerState
