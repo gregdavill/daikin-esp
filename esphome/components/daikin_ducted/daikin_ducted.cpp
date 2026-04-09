@@ -329,13 +329,19 @@ namespace esphome
       // Handle target temperature changes
       if (this->target_temperature_updated)
       {
+        uint8_t setpoint = static_cast<uint8_t>(this->target_temperature);
         if (this->mode == climate::CLIMATE_MODE_COOL)
         {
-          response.cooling_setpoint = static_cast<uint8_t>(this->target_temperature);
+          response.cooling_setpoint = setpoint;
         }
         else if (this->mode == climate::CLIMATE_MODE_HEAT)
         {
-          response.heating_setpoint = static_cast<uint8_t>(this->target_temperature);
+          response.heating_setpoint = setpoint;
+        }
+        else if (this->mode == climate::CLIMATE_MODE_HEAT_COOL)
+        {
+          response.cooling_setpoint = setpoint;
+          response.heating_setpoint = setpoint;
         }
 
         this->target_temperature_updated = false;
@@ -353,6 +359,10 @@ namespace esphome
         else if (this->mode == climate::CLIMATE_MODE_HEAT)
         {
           new_target = payload[ControlRequest::HEATING_SETPOINT];
+        }
+        else if (this->mode == climate::CLIMATE_MODE_HEAT_COOL)
+        {
+          new_target = payload[ControlRequest::COOLING_SETPOINT];
         }
 
         if (new_target != static_cast<uint8_t>(this->target_temperature))
