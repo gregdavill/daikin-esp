@@ -92,9 +92,9 @@ namespace esphome
         size_t bit_pos = 0;
         while (sampling_time < (HOMEBUS_BIT_DURATION * (11)))
         {
-          if (symbol_index > symbol_num)
+          if (symbol_index >= symbol_num)
           {
-            ESP_LOGE(TAG, "Invalid symbol index %lu > %lu", symbol_index, symbol_num);
+            ESP_LOGE(TAG, "Invalid symbol index %lu >= %lu", symbol_index, symbol_num);
             ESP_LOGE(TAG, "byte_pos = %lu, bit_pos = %lu, accumulator = %lu", byte_pos, bit_pos, accumulator);
 
             return byte_pos;
@@ -102,7 +102,7 @@ namespace esphome
 
           rmt_symbol_word_t *symbol = &rmt_symbols[symbol_index];
 
-          if ((symbol_index <= symbol_num))
+          if ((symbol_index < symbol_num))
           {
 
             if (symbol->duration0 > (HOMEBUS_BIT_DURATION * (11)))
@@ -126,8 +126,8 @@ namespace esphome
 
             accumulator += symbol->duration1;
           }
-          // Pad out accumulator if we've timed out
-          if ((symbol_index == symbol_num) || (symbol->duration1 == 0))
+          // Pad out accumulator if we've reached the last symbol or timed out
+          if ((symbol_index == symbol_num - 1) || (symbol->duration1 == 0))
           {
             accumulator += HOMEBUS_BIT_DURATION * 11;
           }
