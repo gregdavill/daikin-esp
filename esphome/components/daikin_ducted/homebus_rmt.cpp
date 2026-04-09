@@ -439,7 +439,7 @@ namespace esphome
         return;
       }
 
-      err = rmt_tx_wait_all_done(this->tx_channel_, portMAX_DELAY);
+      err = rmt_tx_wait_all_done(this->tx_channel_, pdMS_TO_TICKS(100));
       if (err != ESP_OK) {
         ESP_LOGE(TAG, "TX wait failed: %s", esp_err_to_name(err));
       }
