@@ -234,10 +234,11 @@ namespace esphome
       // Handle mode changes
       if (this->mode_updated)
       {
-        if(this->mode == climate::CLIMATE_MODE_OFF){
+        if (this->mode == climate::CLIMATE_MODE_OFF)
+        {
           response.power_status = PowerState::OFF;
         }
-        else 
+        else
         {
           response.power_status = PowerState::ON;
           response.operating_mode = climate_mode_to_p1p2(this->mode);
