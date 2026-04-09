@@ -100,6 +100,13 @@ namespace TemperaturePacket
   constexpr size_t COOLANT_TEMP_OFFSET = 14;
 }
 
+// Packet Type 0x39 - Counter/Alarm (Request payload offsets)
+namespace CounterAlarm
+{
+  constexpr size_t FILTER_STATUS = 6;
+  constexpr uint8_t FILTER_NEEDS_CLEAN = 0x02;
+}
+
 // Packet Type 0x38 - Operation Control (Request payload offsets)
 namespace ControlRequest
 {
