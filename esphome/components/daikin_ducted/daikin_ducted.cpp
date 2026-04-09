@@ -215,20 +215,20 @@ namespace esphome
           .power_status = static_cast<uint8_t>(payload[ControlRequest::POWER_STATUS] & PowerState::ON),
           .operating_mode = payload[ControlRequest::OPERATING_MODE],
           .cooling_setpoint = payload[ControlRequest::COOLING_SETPOINT],
-          .reserved_6 = 0x00,
+          .unknown_6 = 0x00,
           .cooling_fan_speed = payload[ControlRequest::COOLING_FAN_SPEED],
-          .reserved_8 = 0x00,
+          .unknown_8 = 0x00,
           .heating_setpoint = payload[ControlRequest::HEATING_SETPOINT],
-          .reserved_10 = 0x00,
+          .unknown_10 = 0x00,
           .heating_fan_speed = payload[ControlRequest::HEATING_FAN_SPEED],
           .unknown_12 = payload[ControlRequest::UNKNOWN_11],
-          .reserved_13 = 0x00,
-          .reserved_14 = 0x00,
-          .reserved_15 = 0x00,
+          .unknown_13 = 0x00,
+          .unknown_14 = 0x00,
+          .unknown_15 = 0x00,
           .status_flags = payload[ControlRequest::STATUS_FLAGS],
-          .reserved_17 = 0x00,
-          .reserved_18 = 0x00,
-          .reserved_19 = 0x00,
+          .unknown_17 = 0x00,
+          .unknown_18 = 0x00,
+          .unknown_19 = 0x00,
           .crc = 0xFF};
 
       // Handle mode changes
@@ -242,7 +242,7 @@ namespace esphome
         {
           response.power_status = PowerState::ON;
           response.operating_mode = climate_mode_to_p1p2(this->mode);
-          response.reserved_6 = AUX_CHANGED_FLAG;
+          response.unknown_6 = AUX_CHANGED_FLAG;
         }
         this->mode_updated = false;
         state_changed = true;

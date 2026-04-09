@@ -128,20 +128,20 @@ struct ControlResponse
   uint8_t power_status;        // 3: 0=off, 1=on
   uint8_t operating_mode;      // 4: see OperatingMode
   uint8_t cooling_setpoint;    // 5: target temp for cooling
-  uint8_t reserved_6;          // 6: usually 0x00
+  uint8_t unknown_6;           // 6: set to AUX_CHANGED_FLAG on mode change
   uint8_t cooling_fan_speed;   // 7: fan speed + flags
-  uint8_t reserved_8;          // 8: usually 0x00
+  uint8_t unknown_8;           // 8
   uint8_t heating_setpoint;    // 9: target temp for heating
-  uint8_t reserved_10;         // 10: usually 0x00
+  uint8_t unknown_10;          // 10
   uint8_t heating_fan_speed;   // 11: fan speed + flags
   uint8_t unknown_12;          // 12: copied from request
-  uint8_t reserved_13;         // 13: usually 0x00
-  uint8_t reserved_14;         // 14: usually 0x00
-  uint8_t reserved_15;         // 15: usually 0x00
+  uint8_t unknown_13;          // 13
+  uint8_t unknown_14;          // 14
+  uint8_t unknown_15;          // 15
   uint8_t status_flags;        // 16: 0x20 when power on
-  uint8_t reserved_17;         // 17: usually 0x00
-  uint8_t reserved_18;         // 18: usually 0x00
-  uint8_t reserved_19;         // 19: usually 0x00
+  uint8_t unknown_17;          // 17
+  uint8_t unknown_18;          // 18
+  uint8_t unknown_19;          // 19
   uint8_t crc;                 // 20: CRC byte
 };
 
