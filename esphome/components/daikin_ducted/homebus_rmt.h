@@ -67,7 +67,14 @@ namespace esphome
 
             static constexpr size_t MAX_TX_BYTES = 32;
             static constexpr size_t SYMBOLS_PER_BYTE = 11;
+            static constexpr uint32_t TX_GUARD_DELAY_MS = 10;
+
             rmt_symbol_word_t rmt_tx_buffer_[SYMBOLS_PER_BYTE * MAX_TX_BYTES];
+            size_t tx_pending_symbols_{0};
+            uint32_t tx_queued_at_{0};
+            bool tx_pending_{false};
+            bool tx_in_progress_{false};
+            volatile bool tx_complete_{false};
 
             void (*callback_)(void *arg, const uint8_t[], const uint32_t) = nullptr;
             void *callback_arg_{nullptr};
