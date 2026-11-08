@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <string.h>
+#include <cinttypes>
 #include "esp_check.h"
 
 #include "homebus_rmt.h"
@@ -94,8 +95,8 @@ namespace esphome
         {
           if (symbol_index >= symbol_num)
           {
-            ESP_LOGE(TAG, "Invalid symbol index %lu >= %lu", symbol_index, symbol_num);
-            ESP_LOGE(TAG, "byte_pos = %lu, bit_pos = %lu, accumulator = %lu", byte_pos, bit_pos, accumulator);
+            ESP_LOGE(TAG, "Invalid symbol index %u > %zu", symbol_index, symbol_num);
+            ESP_LOGE(TAG, "byte_pos = %zu, bit_pos = %zu, accumulator = %u", byte_pos, bit_pos, accumulator);
 
             return byte_pos;
           }
@@ -107,12 +108,12 @@ namespace esphome
 
             if (symbol->duration0 > (HOMEBUS_BIT_DURATION * (11)))
             {
-              ESP_LOGE(TAG, "Invalid symbol duration0: %lu > %lu", symbol->duration0, (HOMEBUS_BIT_DURATION * (11)));
+              ESP_LOGE(TAG, "Invalid symbol duration0: %u > %" PRIu32, symbol->duration0, (HOMEBUS_BIT_DURATION * (11)));
               return byte_pos;
             }
             if (symbol->duration1 > (HOMEBUS_BIT_DURATION * (11)))
             {
-              ESP_LOGE(TAG, "Invalid symbol duration1: %lu > %lu", symbol->duration1, (HOMEBUS_BIT_DURATION * (11)));
+              ESP_LOGE(TAG, "Invalid symbol duration1: %u > %" PRIu32, symbol->duration1, (HOMEBUS_BIT_DURATION * (11)));
               return byte_pos;
             }
 
@@ -145,13 +146,13 @@ namespace esphome
         /* Check framing and parity */
         if ((decoded_byte & 0x001) == 0x001)
         {
-          ESP_LOGE(TAG, "Bad Start framing, %lu (byte:0x%03x, idx=%u, len=%u)", accumulator, decoded_byte, symbol_index, byte_pos);
+          ESP_LOGE(TAG, "Bad Start framing, %u (byte:0x%03x, idx=%u, len=%zu)", accumulator, decoded_byte, symbol_index, byte_pos);
           print_packet(decoded_bytes, byte_pos);
           return 0;
         }
         if ((decoded_byte & 0x400) != 0x400)
         {
-          ESP_LOGE(TAG, "Bad Stop framing, %lu (byte:0x%03x, idx=%u, len=%u)", accumulator, decoded_byte, symbol_index, byte_pos);
+          ESP_LOGE(TAG, "Bad Stop framing, %u (byte:0x%03x, idx=%u, len=%zu)", accumulator, decoded_byte, symbol_index, byte_pos);
           print_packet(decoded_bytes, byte_pos);
 
           for(int i = 0; i < 18; i++)
@@ -169,7 +170,7 @@ namespace esphome
 
         if (++byte_pos >= max_buffer_length)
         {
-          ESP_LOGE(TAG, "Over max length: %lu > %lu", byte_pos, max_buffer_length);
+          ESP_LOGE(TAG, "Over max length: %zu > %zu", byte_pos, max_buffer_length);
           return 0;
         }
       }
