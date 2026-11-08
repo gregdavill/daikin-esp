@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  ESPHOME_VERSION: "2026.4.0"
+  ESPHOME_VERSION: "2026.10.2"
   ESPHOME_CONFIG: esphome/esp-daikin-ctrl.yaml
 
 jobs:
