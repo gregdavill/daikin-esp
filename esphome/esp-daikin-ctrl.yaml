@@ -3,13 +3,13 @@ esphome:
   friendly_name: "ESP32 WiFi Daikin Controller"
   name_add_mac_suffix: True
 
-  platformio_options:
-    board_build.flash_mode: dio
-
 esp32:
   board: esp32-c3-devkitm-1
+  flash_mode: dio
   framework:
     type: esp-idf
+    advanced:
+      flash_chip: generic
   variant: ESP32C3
 
 # Enable logging
